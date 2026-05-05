@@ -1,0 +1,17 @@
+{
+  "name": "Porto Talent",
+  "short_name": "Porto Talent",
+  "description": "Consultoria de recrutamento e seleção em João Pessoa.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF5EE",
+  "theme_color": "#0E0E0E",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "256x256",
+      "type": "image/x-icon"
+    }
+  ]
+}

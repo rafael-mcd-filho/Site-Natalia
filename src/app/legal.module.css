@@ -1,0 +1,148 @@
+.shell {
+  min-height: 100vh;
+  background: var(--bege-creme);
+  color: var(--preto);
+}
+
+.topbar {
+  border-bottom: 1px solid rgba(184, 147, 90, 0.24);
+  background: rgba(250, 245, 238, 0.94);
+}
+
+.topbarInner {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 22px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.brand {
+  color: var(--preto);
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.backLink {
+  color: var(--cinza-escuro);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.main {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 72px 28px 96px;
+}
+
+.eyebrow {
+  color: var(--dourado);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.title {
+  max-width: 760px;
+  margin: 14px 0 14px;
+  font-family: var(--font-serif);
+  font-size: clamp(38px, 6vw, 68px);
+  font-weight: 500;
+  line-height: 1.06;
+}
+
+.updated {
+  color: var(--cinza-medio);
+  font-size: 14px;
+}
+
+.content {
+  margin-top: 56px;
+  display: grid;
+  gap: 34px;
+}
+
+.section {
+  padding-top: 8px;
+  border-top: 1px solid rgba(184, 147, 90, 0.24);
+}
+
+.section h2 {
+  margin: 0 0 12px;
+  font-family: var(--font-serif);
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.18;
+}
+
+.section p,
+.section li {
+  color: var(--cinza-escuro);
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+.section p {
+  margin: 0 0 14px;
+}
+
+.section ul {
+  margin: 0;
+  padding-left: 22px;
+}
+
+.section li + li {
+  margin-top: 8px;
+}
+
+.note {
+  border: 1px solid rgba(184, 147, 90, 0.28);
+  border-radius: 8px;
+  background: var(--branco);
+  padding: 18px 20px;
+}
+
+.note p {
+  margin: 0;
+}
+
+.contactBox {
+  border-radius: 8px;
+  background: var(--preto);
+  color: var(--bege);
+  padding: 24px;
+}
+
+.contactBox h2 {
+  color: var(--bege);
+}
+
+.contactBox p,
+.contactBox a {
+  color: rgba(242, 230, 216, 0.82);
+}
+
+.contactBox a {
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .topbarInner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .main {
+    padding-top: 48px;
+  }
+
+  .content {
+    margin-top: 42px;
+  }
+}
