@@ -237,6 +237,28 @@ button, a, [role="button"] { touch-action: manipulation; }
   box-shadow: 0 0 0 3px rgba(184,147,90,0.14);
 }
 
+.input-editorial input[aria-invalid="true"],
+.input-editorial select[aria-invalid="true"],
+.input-traditional input[aria-invalid="true"],
+.input-traditional select[aria-invalid="true"],
+.input-traditional textarea[aria-invalid="true"] {
+  border-color: #ef4444;
+}
+
+.field-error {
+  display: block;
+  margin-top: 6px;
+  color: #ef4444;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.field-error--spaced {
+  margin-top: -18px;
+  margin-bottom: 18px;
+}
+
 .checkbox-custom { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
 .checkbox-custom input[type="checkbox"] { display: none; }
 .checkbox-box {

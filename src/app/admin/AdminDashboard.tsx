@@ -1,35 +1,62 @@
 'use client'
 
 import type { FormEvent, ReactNode } from 'react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  AlertTriangle,
+  Archive,
+  ArchiveRestore,
+  ArrowLeft,
+  ArrowRight,
   Building2,
+  CheckCircle2,
+  Columns3,
   Download,
   ExternalLink,
   Eye,
-  FileText,
+  FileDown,
+  GripVertical,
+  Info,
   Lock,
   LogOut,
   Mail,
   MessageCircle,
+  Pencil,
+  Plus,
   RefreshCcw,
-  Search,
+  Save,
+  Trash2,
   UserRound,
   X,
 } from 'lucide-react'
 import { trackEvent } from '@/lib/tracking'
 import styles from './AdminDashboard.module.css'
 
-type Tab = 'candidatos' | 'empresas'
+type Tab = 'candidatos' | 'empresas' | 'kanban'
+type LeadType = 'candidato' | 'empresa'
+type LeadAction = 'archive' | 'restore'
+type LeadTab = 'candidatos' | 'empresas'
+type ToastTone = 'success' | 'error' | 'info'
 
 type BaseLead = {
   id?: string
   created_at?: string
   updated_at?: string
+  archived_at?: string | null
+  admin_notes?: string | null
   nome?: string | null
   email?: string | null
   whatsapp?: string | null
   status?: string | null
+  origem?: string | null
+  utm_source?: string | null
+  utm_medium?: string | null
+  utm_campaign?: string | null
+  utm_term?: string | null
+  utm_content?: string | null
+  landing_path?: string | null
+  referrer?: string | null
+  user_agent?: string | null
 }
 
 type EmpresaLead = BaseLead & {
@@ -50,6 +77,31 @@ type CandidatoLead = BaseLead & {
   cv_nome?: string | null
 }
 
+type KanbanCard = {
+  id: string
+  board_id: string
+  stage_id: string
+  candidate_id?: string | null
+  position?: number | null
+  notes?: string | null
+  candidato?: CandidatoLead | null
+}
+
+type KanbanStage = {
+  id: string
+  board_id: string
+  title: string
+  position?: number | null
+  cards: KanbanCard[]
+}
+
+type KanbanBoard = {
+  id: string
+  title: string
+  created_at?: string
+  stages: KanbanStage[]
+}
+
 type LeadsResponse = {
   candidatos: CandidatoLead[]
   empresas: EmpresaLead[]
@@ -57,9 +109,34 @@ type LeadsResponse = {
   message?: string
 }
 
+type KanbanResponse = {
+  boards: KanbanBoard[]
+  message?: string
+}
+
 type CurriculoViewer = {
   url: string
   nome: string
+}
+
+type LeadDetail = {
+  type: LeadType
+  lead: BaseLead
+}
+
+type ConfirmationState = {
+  title: string
+  message: string
+  warning?: string
+  confirmLabel: string
+  tone?: 'danger' | 'warning' | 'neutral'
+  onConfirm: () => Promise<void> | void
+}
+
+type ToastState = {
+  id: number
+  tone: ToastTone
+  message: string
 }
 
 const normalize = (value: unknown) =>
@@ -81,6 +158,18 @@ const getText = (value: unknown, fallback = '-') => {
 }
 
 const onlyDigits = (value: unknown) => String(value ?? '').replace(/\D/g, '')
+
+const isArchived = (lead: BaseLead) => normalize(lead.status) === 'arquivado' || Boolean(lead.archived_at)
+
+const getLeadLabel = (type: LeadType, lead: BaseLead) => {
+  const name = getText(lead.nome, '')
+
+  if (type === 'candidato') {
+    return name ? `currículo de ${name}` : 'currículo'
+  }
+
+  return name ? `solicitação de ${name}` : 'solicitação da empresa'
+}
 
 const sortByCreatedAt = <T extends BaseLead>(items: T[]) =>
   [...items].sort((a, b) => {
@@ -104,6 +193,8 @@ const formatDate = (value?: string) => {
     timeStyle: 'short',
   }).format(date)
 }
+
+const csvCell = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`
 
 const getWhatsAppUrl = (phone: unknown, message: string) => {
   const digits = onlyDigits(phone)
@@ -133,31 +224,78 @@ function ActionLink({
   icon,
   label,
   variant = 'neutral',
+  iconOnly = false,
 }: {
   href: string
   icon: ReactNode
   label: string
   variant?: 'neutral' | 'success'
+  iconOnly?: boolean
 }) {
   if (!href) {
     return (
-      <button className={`${styles.actionButton} ${styles.actionButtonDisabled}`} disabled type="button">
+      <button
+        aria-label={label}
+        className={`${iconOnly ? styles.actionIconButton : styles.actionButton} ${styles.actionButtonDisabled}`}
+        disabled
+        title={label}
+        type="button"
+      >
         {icon}
-        {label}
+        {!iconOnly && label}
       </button>
     )
   }
 
   return (
     <a
-      className={`${styles.actionButton} ${variant === 'success' ? styles.actionButtonSuccess : ''}`}
+      aria-label={label}
+      className={`${iconOnly ? styles.actionIconButton : styles.actionButton} ${variant === 'success' ? styles.actionButtonSuccess : ''}`}
       href={href}
       target="_blank"
+      title={label}
       rel="noopener noreferrer"
     >
       {icon}
-      {label}
+      {!iconOnly && label}
     </a>
+  )
+}
+
+function RowActionButton({
+  icon,
+  label,
+  onClick,
+  disabled,
+  variant = 'neutral',
+  iconOnly = false,
+}: {
+  icon: ReactNode
+  label: string
+  onClick: () => void
+  disabled?: boolean
+  variant?: 'neutral' | 'warning' | 'danger'
+  iconOnly?: boolean
+}) {
+  const variantClass =
+    variant === 'danger'
+      ? styles.actionButtonDanger
+      : variant === 'warning'
+        ? styles.actionButtonWarning
+        : ''
+
+  return (
+    <button
+      aria-label={label}
+      className={`${iconOnly ? styles.actionIconButton : styles.actionButton} ${variantClass}`}
+      disabled={disabled}
+      title={label}
+      type="button"
+      onClick={onClick}
+    >
+      {icon}
+      {!iconOnly && label}
+    </button>
   )
 }
 
@@ -192,13 +330,37 @@ export default function AdminDashboard({
   const [loginLoading, setLoginLoading] = useState(false)
 
   const [activeTab, setActiveTab] = useState<Tab>('candidatos')
+  const [showArchived, setShowArchived] = useState(false)
   const [candidatos, setCandidatos] = useState<CandidatoLead[]>([])
   const [empresas, setEmpresas] = useState<EmpresaLead[]>([])
+  const [boards, setBoards] = useState<KanbanBoard[]>([])
+  const [activeBoardId, setActiveBoardId] = useState('')
   const [loading, setLoading] = useState(false)
+  const [kanbanLoading, setKanbanLoading] = useState(false)
   const [loadError, setLoadError] = useState('')
+  const [kanbanError, setKanbanError] = useState('')
   const [serviceRole, setServiceRole] = useState(true)
   const [curriculoLoadingId, setCurriculoLoadingId] = useState('')
   const [curriculoViewer, setCurriculoViewer] = useState<CurriculoViewer | null>(null)
+  const [mutatingLeadId, setMutatingLeadId] = useState('')
+  const [draggedCardId, setDraggedCardId] = useState('')
+  const [newBoardTitle, setNewBoardTitle] = useState('')
+  const [newStageTitle, setNewStageTitle] = useState('')
+  const [selectedCandidateId, setSelectedCandidateId] = useState('')
+  const [candidateSearch, setCandidateSearch] = useState('')
+  const [candidateSearchOpen, setCandidateSearchOpen] = useState(false)
+  const [selectedStageId, setSelectedStageId] = useState('')
+  const [selectedLead, setSelectedLead] = useState<LeadDetail | null>(null)
+  const [notesDraft, setNotesDraft] = useState('')
+  const [selectedCandidatoIds, setSelectedCandidatoIds] = useState<string[]>([])
+  const [selectedEmpresaIds, setSelectedEmpresaIds] = useState<string[]>([])
+  const [confirmation, setConfirmation] = useState<ConfirmationState | null>(null)
+  const [toasts, setToasts] = useState<ToastState[]>([])
+  const [editingBoardTitle, setEditingBoardTitle] = useState(false)
+  const [boardTitleDraft, setBoardTitleDraft] = useState('')
+  const [editingStageId, setEditingStageId] = useState('')
+  const [stageTitleDraft, setStageTitleDraft] = useState('')
+  const toastCounter = useRef(0)
 
   const [candidatoFilters, setCandidatoFilters] = useState({
     nome: '',
@@ -215,37 +377,105 @@ export default function AdminDashboard({
     empresa: '',
   })
 
+  const visibleCandidatos = useMemo(
+    () => candidatos.filter(candidato => showArchived || !isArchived(candidato)),
+    [candidatos, showArchived]
+  )
+  const visibleEmpresas = useMemo(
+    () => empresas.filter(empresa => showArchived || !isArchived(empresa)),
+    [empresas, showArchived]
+  )
+
   const areaOptions = useMemo(
-    () => uniqueOptions(candidatos.map(candidato => candidato.area_atuacao)),
-    [candidatos]
+    () => uniqueOptions(visibleCandidatos.map(candidato => candidato.area_atuacao)),
+    [visibleCandidatos]
   )
   const experienciaOptions = useMemo(
-    () => uniqueOptions(candidatos.map(candidato => candidato.experiencia)),
-    [candidatos]
+    () => uniqueOptions(visibleCandidatos.map(candidato => candidato.experiencia)),
+    [visibleCandidatos]
   )
 
   const filteredCandidatos = useMemo(
     () =>
-      candidatos.filter(candidato =>
+      visibleCandidatos.filter(candidato =>
         matchesText(candidato.nome, candidatoFilters.nome) &&
         matchesText(candidato.cargo_atual, candidatoFilters.cargo) &&
         matchesText(candidato.area_atuacao, candidatoFilters.area) &&
         matchesText(candidato.experiencia, candidatoFilters.experiencia) &&
         matchesText(candidato.pretensao_salarial, candidatoFilters.salario)
       ),
-    [candidatos, candidatoFilters]
+    [visibleCandidatos, candidatoFilters]
   )
 
   const filteredEmpresas = useMemo(
     () =>
-      empresas.filter(empresa =>
+      visibleEmpresas.filter(empresa =>
         matchesText(empresa.nome, empresaFilters.nome) &&
         matchesText(empresa.email, empresaFilters.email) &&
         matchesText(empresa.whatsapp, empresaFilters.whatsapp) &&
         matchesText(empresa.empresa, empresaFilters.empresa)
       ),
-    [empresas, empresaFilters]
+    [visibleEmpresas, empresaFilters]
   )
+
+  const activeBoard = useMemo(
+    () => boards.find(board => board.id === activeBoardId) ?? boards[0] ?? null,
+    [activeBoardId, boards]
+  )
+  const boardCandidateIds = useMemo(
+    () =>
+      new Set(
+        (activeBoard?.stages ?? [])
+          .flatMap(stage => stage.cards)
+          .map(card => card.candidate_id)
+          .filter(Boolean)
+      ),
+    [activeBoard]
+  )
+  const effectiveSelectedStageId = useMemo(
+    () =>
+      activeBoard?.stages.some(stage => stage.id === selectedStageId)
+        ? selectedStageId
+        : activeBoard?.stages[0]?.id || '',
+    [activeBoard, selectedStageId]
+  )
+  const kanbanCandidates = useMemo(
+    () =>
+      candidatos.filter(candidato =>
+        candidato.id &&
+        !isArchived(candidato) &&
+        !boardCandidateIds.has(candidato.id)
+      ),
+    [boardCandidateIds, candidatos]
+  )
+  const filteredKanbanCandidates = useMemo(() => {
+    const query = normalize(candidateSearch)
+    const candidates = query
+      ? kanbanCandidates.filter(candidato =>
+          matchesText(candidato.nome, candidateSearch) ||
+          matchesText(candidato.cargo_atual, candidateSearch) ||
+          matchesText(candidato.email, candidateSearch) ||
+          matchesText(candidato.whatsapp, candidateSearch)
+        )
+      : kanbanCandidates
+
+    return candidates.slice(0, 8)
+  }, [candidateSearch, kanbanCandidates])
+  const selectedKanbanCandidate = useMemo(
+    () => kanbanCandidates.find(candidato => candidato.id === selectedCandidateId) ?? null,
+    [kanbanCandidates, selectedCandidateId]
+  )
+  const currentLeadType: LeadType = activeTab === 'empresas' ? 'empresa' : 'candidato'
+  const currentSelectedIds = activeTab === 'empresas' ? selectedEmpresaIds : selectedCandidatoIds
+  const currentFilteredIds = useMemo(
+    () =>
+      (activeTab === 'empresas' ? filteredEmpresas : filteredCandidatos)
+        .map(item => item.id)
+        .filter(Boolean) as string[],
+    [activeTab, filteredCandidatos, filteredEmpresas]
+  )
+  const allCurrentFilteredSelected =
+    currentFilteredIds.length > 0 && currentFilteredIds.every(id => currentSelectedIds.includes(id))
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -267,8 +497,12 @@ export default function AdminDashboard({
         throw new Error(data.message || 'Não foi possível carregar o painel.')
       }
 
-      setCandidatos(sortByCreatedAt(data.candidatos || []))
-      setEmpresas(sortByCreatedAt(data.empresas || []))
+      const nextCandidatos = sortByCreatedAt(data.candidatos || [])
+      const nextEmpresas = sortByCreatedAt(data.empresas || [])
+      setCandidatos(nextCandidatos)
+      setEmpresas(nextEmpresas)
+      setSelectedCandidatoIds(ids => ids.filter(id => nextCandidatos.some(candidato => candidato.id === id)))
+      setSelectedEmpresaIds(ids => ids.filter(id => nextEmpresas.some(empresa => empresa.id === id)))
       setServiceRole(Boolean(data.serviceRole))
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : 'Erro inesperado ao carregar dados.')
@@ -277,15 +511,89 @@ export default function AdminDashboard({
     }
   }, [])
 
+  const loadKanban = useCallback(async () => {
+    setKanbanLoading(true)
+    setKanbanError('')
+
+    try {
+      const response = await fetch('/api/admin/kanban', { cache: 'no-store' })
+      const data = (await response.json()) as KanbanResponse
+
+      if (response.status === 401) {
+        setAuthenticated(false)
+        setBoards([])
+        return
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Não foi possível carregar o kanban.')
+      }
+
+      setBoards(data.boards || [])
+    } catch (error) {
+      setKanbanError(error instanceof Error ? error.message : 'Erro inesperado ao carregar o kanban.')
+    } finally {
+      setKanbanLoading(false)
+    }
+  }, [])
+
+  const refreshAll = useCallback(async () => {
+    await Promise.all([loadData(), loadKanban()])
+  }, [loadData, loadKanban])
+
   useEffect(() => {
     if (!authenticated) return
 
     const timeout = window.setTimeout(() => {
-      void loadData()
+      void refreshAll()
     }, 0)
 
     return () => window.clearTimeout(timeout)
-  }, [authenticated, loadData])
+  }, [authenticated, refreshAll])
+
+  const showToast = useCallback((message: string, tone: ToastTone = 'success') => {
+    const id = Date.now() + toastCounter.current++
+    setToasts(items => [...items, { id, tone, message }])
+    window.setTimeout(() => {
+      setToasts(items => items.filter(item => item.id !== id))
+    }, 4200)
+  }, [])
+
+  const askConfirmation = useCallback((config: ConfirmationState) => {
+    setConfirmation(config)
+  }, [])
+
+  const setSelectedIdsForTab = (tab: LeadTab, updater: (ids: string[]) => string[]) => {
+    if (tab === 'candidatos') {
+      setSelectedCandidatoIds(updater)
+      return
+    }
+
+    setSelectedEmpresaIds(updater)
+  }
+
+  const toggleLeadSelection = (tab: LeadTab, id?: string) => {
+    if (!id) return
+    setSelectedIdsForTab(tab, ids => ids.includes(id) ? ids.filter(item => item !== id) : [...ids, id])
+  }
+
+  const toggleAllCurrentSelection = () => {
+    if (activeTab === 'kanban') return
+    const tab = activeTab as LeadTab
+
+    setSelectedIdsForTab(tab, ids => {
+      if (allCurrentFilteredSelected) {
+        return ids.filter(id => !currentFilteredIds.includes(id))
+      }
+
+      return Array.from(new Set([...ids, ...currentFilteredIds]))
+    })
+  }
+
+  const openLeadDetails = (type: LeadType, lead: BaseLead) => {
+    setSelectedLead({ type, lead })
+    setNotesDraft(getText(lead.admin_notes, ''))
+  }
 
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -318,6 +626,7 @@ export default function AdminDashboard({
     setAuthenticated(false)
     setCandidatos([])
     setEmpresas([])
+    setBoards([])
   }
 
   const openCurriculo = async (candidato: CandidatoLead) => {
@@ -351,6 +660,584 @@ export default function AdminDashboard({
     } finally {
       setCurriculoLoadingId('')
     }
+  }
+
+  const updateLeadStatus = async (type: LeadType, lead: BaseLead, action: LeadAction) => {
+    if (!lead.id) return
+    const label = getLeadLabel(type, lead)
+    const actionText = action === 'archive' ? 'arquivar' : 'restaurar'
+    const warning =
+      action === 'archive'
+        ? 'O registro sairá da lista principal e ficará visível apenas quando "Mostrar arquivados" estiver marcado.'
+        : 'O registro voltará para a lista principal.'
+    askConfirmation({
+      title: `Confirmar ${actionText}`,
+      message: `Você está prestes a ${actionText} este ${label}.`,
+      warning,
+      confirmLabel: action === 'archive' ? 'Arquivar' : 'Restaurar',
+      tone: action === 'archive' ? 'warning' : 'neutral',
+      onConfirm: async () => {
+        setMutatingLeadId(lead.id!)
+        setLoadError('')
+
+        try {
+          const response = await fetch('/api/admin/leads', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type, id: lead.id, action }),
+          })
+          const data = await response.json().catch(() => ({}))
+
+          if (!response.ok) {
+            throw new Error(data.message || 'Não foi possível atualizar o registro.')
+          }
+
+          const updater = (item: BaseLead) => item.id === lead.id ? { ...item, ...data.lead } : item
+
+          if (type === 'candidato') {
+            setCandidatos(items => sortByCreatedAt(items.map(item => updater(item) as CandidatoLead)))
+          } else {
+            setEmpresas(items => sortByCreatedAt(items.map(item => updater(item) as EmpresaLead)))
+          }
+          showToast(action === 'archive' ? 'Registro arquivado.' : 'Registro restaurado.')
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Não foi possível atualizar o registro.'
+          setLoadError(message)
+          showToast(message, 'error')
+        } finally {
+          setMutatingLeadId('')
+        }
+      },
+    })
+  }
+
+  const deleteLead = async (type: LeadType, lead: BaseLead) => {
+    if (!lead.id) return
+    const label = getLeadLabel(type, lead)
+    const extraWarning =
+      type === 'candidato'
+        ? 'Se houver arquivo de currículo anexado, ele também será removido quando possível.'
+        : 'A solicitação da empresa será removida do painel.'
+    askConfirmation({
+      title: 'Excluir permanentemente',
+      message: `Você está prestes a excluir este ${label}.`,
+      warning: `Essa ação não pode ser desfeita. ${extraWarning}`,
+      confirmLabel: 'Excluir',
+      tone: 'danger',
+      onConfirm: async () => {
+        setMutatingLeadId(lead.id!)
+        setLoadError('')
+
+        try {
+          const response = await fetch('/api/admin/leads', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type, id: lead.id }),
+          })
+          const data = await response.json().catch(() => ({}))
+
+          if (!response.ok) {
+            throw new Error(data.message || 'Não foi possível excluir o registro.')
+          }
+
+          if (type === 'candidato') {
+            setCandidatos(items => items.filter(item => item.id !== lead.id))
+            setSelectedCandidatoIds(ids => ids.filter(id => id !== lead.id))
+            await loadKanban()
+          } else {
+            setEmpresas(items => items.filter(item => item.id !== lead.id))
+            setSelectedEmpresaIds(ids => ids.filter(id => id !== lead.id))
+          }
+          setSelectedLead(current => current?.lead.id === lead.id ? null : current)
+          showToast('Registro excluído.')
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Não foi possível excluir o registro.'
+          setLoadError(message)
+          showToast(message, 'error')
+        } finally {
+          setMutatingLeadId('')
+        }
+      },
+    })
+  }
+
+  const saveLeadNotes = async () => {
+    if (!selectedLead?.lead.id) return
+    const leadId = selectedLead.lead.id
+    const { type, lead } = selectedLead
+    setMutatingLeadId(leadId)
+    setLoadError('')
+
+    try {
+      const response = await fetch('/api/admin/leads', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, id: leadId, action: 'update_notes', notes: notesDraft }),
+      })
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Não foi possível salvar as observações.')
+      }
+
+      const updater = (item: BaseLead) => item.id === lead.id ? { ...item, ...data.lead } : item
+      if (type === 'candidato') {
+        setCandidatos(items => sortByCreatedAt(items.map(item => updater(item) as CandidatoLead)))
+      } else {
+        setEmpresas(items => sortByCreatedAt(items.map(item => updater(item) as EmpresaLead)))
+      }
+      setSelectedLead({ type, lead: { ...lead, ...data.lead } })
+      showToast('Observações salvas.')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Não foi possível salvar as observações.'
+      setLoadError(message)
+      showToast(message, 'error')
+    } finally {
+      setMutatingLeadId('')
+    }
+  }
+
+  const exportCurrentCsv = () => {
+    if (activeTab === 'kanban') return
+    const isEmpresa = activeTab === 'empresas'
+    const rows = isEmpresa ? filteredEmpresas : filteredCandidatos
+    const headers = isEmpresa
+      ? ['Nome', 'Email', 'WhatsApp', 'Empresa', 'Vaga', 'Prazo', 'Mensagem', 'Status', 'Recebido', 'UTM source', 'UTM campaign']
+      : ['Nome', 'Email', 'WhatsApp', 'Cidade', 'Cargo', 'Área', 'Experiência', 'Salário', 'LinkedIn', 'Status', 'Recebido', 'UTM source', 'UTM campaign']
+    const bodyRows = rows.map(item =>
+      isEmpresa
+        ? [
+            item.nome,
+            item.email,
+            item.whatsapp,
+            (item as EmpresaLead).empresa,
+            (item as EmpresaLead).vaga,
+            (item as EmpresaLead).prazo,
+            (item as EmpresaLead).mensagem,
+            item.status,
+            formatDate(item.created_at),
+            item.utm_source,
+            item.utm_campaign,
+          ]
+        : [
+            item.nome,
+            item.email,
+            item.whatsapp,
+            (item as CandidatoLead).cidade_estado,
+            (item as CandidatoLead).cargo_atual,
+            (item as CandidatoLead).area_atuacao,
+            (item as CandidatoLead).experiencia,
+            (item as CandidatoLead).pretensao_salarial,
+            (item as CandidatoLead).linkedin,
+            item.status,
+            formatDate(item.created_at),
+            item.utm_source,
+            item.utm_campaign,
+          ]
+    )
+    const csv = [headers, ...bodyRows].map(row => row.map(csvCell).join(';')).join('\n')
+    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `porto-talent-${activeTab}-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+    showToast('CSV exportado.')
+  }
+
+  const bulkUpdateLeadStatus = (type: LeadType, action: LeadAction) => {
+    const selectedIds = type === 'candidato' ? selectedCandidatoIds : selectedEmpresaIds
+    if (selectedIds.length === 0) return
+    const actionText = action === 'archive' ? 'arquivar' : 'restaurar'
+
+    askConfirmation({
+      title: `Confirmar ${actionText}`,
+      message: `Você está prestes a ${actionText} ${selectedIds.length} registros selecionados.`,
+      warning: action === 'archive' ? 'Eles sairão da lista principal.' : 'Eles voltarão para a lista principal.',
+      confirmLabel: action === 'archive' ? 'Arquivar selecionados' : 'Restaurar selecionados',
+      tone: action === 'archive' ? 'warning' : 'neutral',
+      onConfirm: async () => {
+        setLoadError('')
+        try {
+          const responses = await Promise.all(
+            selectedIds.map(id =>
+              fetch('/api/admin/leads', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type, id, action }),
+              }).then(async response => {
+                const data = await response.json().catch(() => ({}))
+                if (!response.ok) throw new Error(data.message || 'Não foi possível atualizar os registros.')
+                return data.lead as BaseLead
+              })
+            )
+          )
+          const updated = new Map(responses.map(lead => [lead.id, lead]))
+          const updater = (item: BaseLead) => updated.has(item.id) ? { ...item, ...updated.get(item.id) } : item
+
+          if (type === 'candidato') {
+            setCandidatos(items => sortByCreatedAt(items.map(item => updater(item) as CandidatoLead)))
+            setSelectedCandidatoIds([])
+          } else {
+            setEmpresas(items => sortByCreatedAt(items.map(item => updater(item) as EmpresaLead)))
+            setSelectedEmpresaIds([])
+          }
+          showToast(`${selectedIds.length} registros atualizados.`)
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Não foi possível atualizar os registros.'
+          setLoadError(message)
+          showToast(message, 'error')
+        }
+      },
+    })
+  }
+
+  const bulkDeleteLeads = (type: LeadType) => {
+    const selectedIds = type === 'candidato' ? selectedCandidatoIds : selectedEmpresaIds
+    if (selectedIds.length === 0) return
+
+    askConfirmation({
+      title: 'Excluir selecionados',
+      message: `Você está prestes a excluir ${selectedIds.length} registros selecionados.`,
+      warning: 'Essa ação não pode ser desfeita.',
+      confirmLabel: 'Excluir selecionados',
+      tone: 'danger',
+      onConfirm: async () => {
+        setLoadError('')
+        try {
+          await Promise.all(
+            selectedIds.map(id =>
+              fetch('/api/admin/leads', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type, id }),
+              }).then(async response => {
+                const data = await response.json().catch(() => ({}))
+                if (!response.ok) throw new Error(data.message || 'Não foi possível excluir os registros.')
+              })
+            )
+          )
+          if (type === 'candidato') {
+            setCandidatos(items => items.filter(item => !selectedIds.includes(item.id || '')))
+            setSelectedCandidatoIds([])
+            await loadKanban()
+          } else {
+            setEmpresas(items => items.filter(item => !selectedIds.includes(item.id || '')))
+            setSelectedEmpresaIds([])
+          }
+          showToast(`${selectedIds.length} registros excluídos.`)
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Não foi possível excluir os registros.'
+          setLoadError(message)
+          showToast(message, 'error')
+        }
+      },
+    })
+  }
+
+  const kanbanRequest = async (method: 'POST' | 'PATCH' | 'DELETE', payload: Record<string, unknown>) => {
+    const response = await fetch('/api/admin/kanban', {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    const data = await response.json().catch(() => ({}))
+
+    if (response.status === 401) {
+      setAuthenticated(false)
+      throw new Error('Sessão expirada.')
+    }
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Não foi possível atualizar o kanban.')
+    }
+
+    return data
+  }
+
+  const createBoard = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const title = newBoardTitle.trim()
+    if (!title) return
+
+    setKanbanError('')
+    setKanbanLoading(true)
+
+    try {
+      const data = await kanbanRequest('POST', { action: 'create_board', title })
+      setNewBoardTitle('')
+      await loadKanban()
+      if (data.board?.id) setActiveBoardId(data.board.id)
+    } catch (error) {
+      setKanbanError(error instanceof Error ? error.message : 'Não foi possível criar a seleção.')
+    } finally {
+      setKanbanLoading(false)
+    }
+  }
+
+  const createStage = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const title = newStageTitle.trim()
+    if (!activeBoard || !title) return
+
+    setKanbanError('')
+    setKanbanLoading(true)
+
+    try {
+      await kanbanRequest('POST', { action: 'create_stage', boardId: activeBoard.id, title })
+      setNewStageTitle('')
+      await loadKanban()
+    } catch (error) {
+      setKanbanError(error instanceof Error ? error.message : 'Não foi possível criar a etapa.')
+    } finally {
+      setKanbanLoading(false)
+    }
+  }
+
+  const updateBoardTitle = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!activeBoard || !boardTitleDraft.trim()) return
+
+    setKanbanError('')
+    setKanbanLoading(true)
+
+    try {
+      await kanbanRequest('PATCH', {
+        action: 'update_board',
+        boardId: activeBoard.id,
+        title: boardTitleDraft.trim(),
+      })
+      setEditingBoardTitle(false)
+      await loadKanban()
+      showToast('Título da seleção atualizado.')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Não foi possível atualizar a seleção.'
+      setKanbanError(message)
+      showToast(message, 'error')
+    } finally {
+      setKanbanLoading(false)
+    }
+  }
+
+  const updateStageTitle = async (stage: KanbanStage) => {
+    if (!stageTitleDraft.trim()) return
+
+    setKanbanError('')
+    setKanbanLoading(true)
+
+    try {
+      await kanbanRequest('PATCH', {
+        action: 'update_stage',
+        stageId: stage.id,
+        title: stageTitleDraft.trim(),
+      })
+      setEditingStageId('')
+      setStageTitleDraft('')
+      await loadKanban()
+      showToast('Etapa atualizada.')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Não foi possível atualizar a etapa.'
+      setKanbanError(message)
+      showToast(message, 'error')
+    } finally {
+      setKanbanLoading(false)
+    }
+  }
+
+  const moveStage = async (stage: KanbanStage, direction: 'up' | 'down') => {
+    if (!activeBoard) return
+    setKanbanError('')
+    setKanbanLoading(true)
+
+    try {
+      await kanbanRequest('PATCH', {
+        action: 'move_stage',
+        boardId: activeBoard.id,
+        stageId: stage.id,
+        direction,
+      })
+      await loadKanban()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Não foi possível mover a etapa.'
+      setKanbanError(message)
+      showToast(message, 'error')
+    } finally {
+      setKanbanLoading(false)
+    }
+  }
+
+  const updateCardNotes = async (card: KanbanCard, notes: string) => {
+    setKanbanError('')
+
+    try {
+      await kanbanRequest('PATCH', {
+        action: 'update_card',
+        cardId: card.id,
+        notes,
+      })
+      showToast('Observação do card salva.', 'info')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Não foi possível salvar a observação.'
+      setKanbanError(message)
+      showToast(message, 'error')
+    }
+  }
+
+  const addCandidateToBoard = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!activeBoard || !selectedCandidateId || !effectiveSelectedStageId) return
+
+    setKanbanError('')
+    setKanbanLoading(true)
+
+    try {
+      await kanbanRequest('POST', {
+        action: 'create_card',
+        boardId: activeBoard.id,
+        stageId: effectiveSelectedStageId,
+        candidateId: selectedCandidateId,
+      })
+      setSelectedCandidateId('')
+      setCandidateSearch('')
+      setCandidateSearchOpen(false)
+      await loadKanban()
+    } catch (error) {
+      setKanbanError(error instanceof Error ? error.message : 'Não foi possível adicionar o candidato.')
+    } finally {
+      setKanbanLoading(false)
+    }
+  }
+
+  const moveCard = async (cardId: string, stageId: string) => {
+    if (!activeBoard || !cardId || !stageId) return
+
+    setKanbanError('')
+    setKanbanLoading(true)
+
+    try {
+      await kanbanRequest('PATCH', {
+        action: 'move_card',
+        boardId: activeBoard.id,
+        cardId,
+        stageId,
+      })
+      await loadKanban()
+    } catch (error) {
+      setKanbanError(error instanceof Error ? error.message : 'Não foi possível mover o candidato.')
+    } finally {
+      setKanbanLoading(false)
+      setDraggedCardId('')
+    }
+  }
+
+  const archiveBoard = async (board: KanbanBoard) => {
+    askConfirmation({
+      title: 'Arquivar seleção',
+      message: `Você está prestes a arquivar "${board.title}".`,
+      warning: 'A seleção sairá da tela principal do Kanban, sem excluir candidatos ou currículos.',
+      confirmLabel: 'Arquivar seleção',
+      tone: 'warning',
+      onConfirm: async () => {
+        setKanbanError('')
+        setKanbanLoading(true)
+
+        try {
+          await kanbanRequest('PATCH', { action: 'archive_board', boardId: board.id })
+          if (activeBoardId === board.id) setActiveBoardId('')
+          await loadKanban()
+          showToast('Seleção arquivada.')
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Não foi possível arquivar a seleção.'
+          setKanbanError(message)
+          showToast(message, 'error')
+        } finally {
+          setKanbanLoading(false)
+        }
+      },
+    })
+  }
+
+  const deleteBoard = async (board: KanbanBoard) => {
+    askConfirmation({
+      title: 'Excluir seleção',
+      message: `Você está prestes a excluir "${board.title}" e todas as etapas deste kanban.`,
+      warning: 'Essa ação não pode ser desfeita.',
+      confirmLabel: 'Excluir seleção',
+      tone: 'danger',
+      onConfirm: async () => {
+        setKanbanError('')
+        setKanbanLoading(true)
+
+        try {
+          await kanbanRequest('DELETE', { action: 'delete_board', boardId: board.id })
+          if (activeBoardId === board.id) setActiveBoardId('')
+          await loadKanban()
+          showToast('Seleção excluída.')
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Não foi possível excluir a seleção.'
+          setKanbanError(message)
+          showToast(message, 'error')
+        } finally {
+          setKanbanLoading(false)
+        }
+      },
+    })
+  }
+
+  const deleteStage = async (stage: KanbanStage) => {
+    askConfirmation({
+      title: 'Excluir etapa',
+      message: `Você está prestes a excluir "${stage.title}" e todos os cards dentro dela.`,
+      warning: 'Essa ação não pode ser desfeita.',
+      confirmLabel: 'Excluir etapa',
+      tone: 'danger',
+      onConfirm: async () => {
+        setKanbanError('')
+        setKanbanLoading(true)
+
+        try {
+          await kanbanRequest('DELETE', { action: 'delete_stage', stageId: stage.id })
+          await loadKanban()
+          showToast('Etapa excluída.')
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Não foi possível excluir a etapa.'
+          setKanbanError(message)
+          showToast(message, 'error')
+        } finally {
+          setKanbanLoading(false)
+        }
+      },
+    })
+  }
+
+  const deleteCard = async (card: KanbanCard) => {
+    const candidateName = getText(card.candidato?.nome, 'este candidato')
+    askConfirmation({
+      title: 'Remover candidato da etapa',
+      message: `Você está prestes a remover ${candidateName} deste kanban.`,
+      warning: 'O currículo não será excluído, apenas removido da etapa.',
+      confirmLabel: 'Remover',
+      tone: 'warning',
+      onConfirm: async () => {
+        setKanbanError('')
+        setKanbanLoading(true)
+
+        try {
+          await kanbanRequest('DELETE', { action: 'delete_card', cardId: card.id })
+          await loadKanban()
+          showToast('Candidato removido da etapa.')
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Não foi possível remover o candidato da etapa.'
+          setKanbanError(message)
+          showToast(message, 'error')
+        } finally {
+          setKanbanLoading(false)
+        }
+      },
+    })
   }
 
   const clearCandidatoFilters = () =>
@@ -393,22 +1280,51 @@ export default function AdminDashboard({
   return (
     <main className={styles.shell}>
       <header className={styles.header}>
-        <div>
-          <span className={styles.kicker}>Porto Talent</span>
-          <h1>Painel administrativo</h1>
-          <p>Consulta e atendimento dos leads recebidos pelo site.</p>
+        <div className={styles.headerTop}>
+          <div>
+            <span className={styles.kicker}>Porto Talent</span>
+            <h1>Painel administrativo</h1>
+            <p>Consulta e atendimento dos leads recebidos pelo site.</p>
+          </div>
+
+          <div className={styles.headerActions}>
+            <button className={styles.secondaryButton} type="button" onClick={refreshAll} disabled={loading || kanbanLoading}>
+              <RefreshCcw size={16} />
+              {loading || kanbanLoading ? 'Atualizando' : 'Atualizar'}
+            </button>
+            <button className={styles.secondaryButton} type="button" onClick={handleLogout}>
+              <LogOut size={16} />
+              Sair
+            </button>
+          </div>
         </div>
 
-        <div className={styles.headerActions}>
-          <button className={styles.secondaryButton} type="button" onClick={loadData} disabled={loading}>
-            <RefreshCcw size={16} />
-            {loading ? 'Atualizando' : 'Atualizar'}
+        <nav className={styles.headerMenu} aria-label="Telas do painel administrativo">
+          <button
+            className={activeTab === 'candidatos' ? styles.headerMenuActive : ''}
+            type="button"
+            onClick={() => setActiveTab('candidatos')}
+          >
+            <UserRound size={16} />
+            Currículos
           </button>
-          <button className={styles.secondaryButton} type="button" onClick={handleLogout}>
-            <LogOut size={16} />
-            Sair
+          <button
+            className={activeTab === 'empresas' ? styles.headerMenuActive : ''}
+            type="button"
+            onClick={() => setActiveTab('empresas')}
+          >
+            <Building2 size={16} />
+            Empresas
           </button>
-        </div>
+          <button
+            className={activeTab === 'kanban' ? styles.headerMenuActive : ''}
+            type="button"
+            onClick={() => setActiveTab('kanban')}
+          >
+            <Columns3 size={16} />
+            Kanban
+          </button>
+        </nav>
       </header>
 
       {!serviceRole && (
@@ -419,39 +1335,57 @@ export default function AdminDashboard({
       )}
 
       {loadError && <div className={styles.errorBox}>{loadError}</div>}
+      {kanbanError && <div className={styles.errorBox}>{kanbanError}</div>}
 
       <section className={styles.metricsGrid}>
-        <MetricCard label="currículos recebidos" value={candidatos.length} icon={<UserRound size={18} />} />
-        <MetricCard label="empresas em contato" value={empresas.length} icon={<Building2 size={18} />} />
-        <MetricCard
-          label="currículos filtrados"
-          value={filteredCandidatos.length}
-          icon={<FileText size={18} />}
-        />
-        <MetricCard label="empresas filtradas" value={filteredEmpresas.length} icon={<Search size={18} />} />
+        <MetricCard label="currículos ativos" value={candidatos.filter(c => !isArchived(c)).length} icon={<UserRound size={18} />} />
+        <MetricCard label="empresas ativas" value={empresas.filter(e => !isArchived(e)).length} icon={<Building2 size={18} />} />
+        <MetricCard label="arquivados" value={[...candidatos, ...empresas].filter(isArchived).length} icon={<Archive size={18} />} />
+        <MetricCard label="seleções kanban" value={boards.length} icon={<Columns3 size={18} />} />
       </section>
 
-      <section className={styles.panel}>
-        <div className={styles.tabs}>
-          <button
-            className={activeTab === 'candidatos' ? styles.tabActive : ''}
-            type="button"
-            onClick={() => setActiveTab('candidatos')}
-          >
-            <UserRound size={16} />
-            Currículos
-          </button>
-          <button
-            className={activeTab === 'empresas' ? styles.tabActive : ''}
-            type="button"
-            onClick={() => setActiveTab('empresas')}
-          >
-            <Building2 size={16} />
-            Empresas
-          </button>
+      {activeTab !== 'kanban' && (
+        <div className={styles.screenToolbar}>
+          <div className={styles.toolbarGroup}>
+            <label className={styles.archiveToggle}>
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={event => setShowArchived(event.target.checked)}
+              />
+              Mostrar arquivados
+            </label>
+            <span className={styles.selectionHint}>{currentSelectedIds.length} selecionados</span>
+          </div>
+          <div className={styles.toolbarGroup}>
+            <button className={styles.secondaryButton} type="button" onClick={exportCurrentCsv}>
+              <FileDown size={16} />
+              Exportar CSV
+            </button>
+            {currentSelectedIds.length > 0 && (
+              <>
+                <button className={styles.secondaryButton} type="button" onClick={() => bulkUpdateLeadStatus(currentLeadType, 'archive')}>
+                  <Archive size={16} />
+                  Arquivar
+                </button>
+                {showArchived && (
+                  <button className={styles.secondaryButton} type="button" onClick={() => bulkUpdateLeadStatus(currentLeadType, 'restore')}>
+                    <ArchiveRestore size={16} />
+                    Restaurar
+                  </button>
+                )}
+                <button className={`${styles.secondaryButton} ${styles.actionButtonDanger}`} type="button" onClick={() => bulkDeleteLeads(currentLeadType)}>
+                  <Trash2 size={16} />
+                  Excluir
+                </button>
+              </>
+            )}
+          </div>
         </div>
+      )}
 
-        {activeTab === 'candidatos' ? (
+      <section className={styles.panel}>
+        {activeTab === 'candidatos' && (
           <>
             <div className={styles.filterGrid}>
               <label>
@@ -525,6 +1459,14 @@ export default function AdminDashboard({
               <table className={styles.table}>
                 <thead>
                   <tr>
+                    <th>
+                      <input
+                        aria-label="Selecionar currículos filtrados"
+                        type="checkbox"
+                        checked={allCurrentFilteredSelected}
+                        onChange={toggleAllCurrentSelection}
+                      />
+                    </th>
                     <th>Candidato</th>
                     <th>Cargo / área</th>
                     <th>Experiência</th>
@@ -535,6 +1477,7 @@ export default function AdminDashboard({
                 </thead>
                 <tbody>
                   {filteredCandidatos.map(candidato => {
+                    const archived = isArchived(candidato)
                     const whatsappUrl = getWhatsAppUrl(
                       candidato.whatsapp,
                       `Olá, ${getText(candidato.nome, '')}! Recebemos seu currículo pela Porto Talent.`
@@ -545,38 +1488,74 @@ export default function AdminDashboard({
                     const cvButtonId = candidato.id || getText(candidato.cv_url, '')
 
                     return (
-                      <tr key={rowId}>
-                        <td>
+                      <tr key={rowId} className={archived ? styles.archivedRow : ''}>
+                        <td data-label="Selecionar">
+                          <input
+                            aria-label={`Selecionar ${getText(candidato.nome, 'candidato')}`}
+                            type="checkbox"
+                            checked={Boolean(candidato.id && selectedCandidatoIds.includes(candidato.id))}
+                            onChange={() => toggleLeadSelection('candidatos', candidato.id)}
+                          />
+                        </td>
+                        <td data-label="Candidato">
                           <strong>{getText(candidato.nome)}</strong>
+                          {archived && <span className={styles.statusPill}>Arquivado</span>}
                           <span>{getText(candidato.email)}</span>
                           <span>{getText(candidato.whatsapp)}</span>
                         </td>
-                        <td>
+                        <td data-label="Cargo / área">
                           <strong>{getText(candidato.cargo_atual)}</strong>
                           <span>{getText(candidato.area_atuacao)}</span>
                           <span>{getText(candidato.cidade_estado)}</span>
                         </td>
-                        <td>{getText(candidato.experiencia)}</td>
-                        <td>{getText(candidato.pretensao_salarial)}</td>
-                        <td>{formatDate(candidato.created_at)}</td>
-                        <td>
+                        <td data-label="Experiência">{getText(candidato.experiencia)}</td>
+                        <td data-label="Salário">{getText(candidato.pretensao_salarial)}</td>
+                        <td data-label="Recebido">{formatDate(candidato.created_at)}</td>
+                        <td data-label="Ações">
                           <div className={styles.rowActions}>
                             <ActionLink
                               href={whatsappUrl}
                               icon={<MessageCircle size={15} />}
                               label="WhatsApp"
                               variant="success"
+                              iconOnly
                             />
-                            <ActionLink href={mailUrl} icon={<Mail size={15} />} label="E-mail" />
+                            <ActionLink href={mailUrl} icon={<Mail size={15} />} label="E-mail" iconOnly />
                             <button
-                              className={styles.actionButton}
+                              aria-label="Ver detalhes"
+                              className={styles.actionIconButton}
+                              title="Ver detalhes"
+                              type="button"
+                              onClick={() => openLeadDetails('candidato', candidato)}
+                            >
+                              <Info size={15} />
+                            </button>
+                            <button
+                              aria-label={curriculoLoadingId === cvButtonId ? 'Abrindo currículo' : 'Abrir currículo'}
+                              className={styles.actionIconButton}
                               disabled={!hasCv || curriculoLoadingId === cvButtonId}
+                              title={curriculoLoadingId === cvButtonId ? 'Abrindo currículo' : 'Abrir currículo'}
                               type="button"
                               onClick={() => openCurriculo(candidato)}
                             >
                               <Eye size={15} />
-                              {curriculoLoadingId === cvButtonId ? 'Abrindo' : 'Currículo'}
                             </button>
+                            <RowActionButton
+                              icon={archived ? <ArchiveRestore size={15} /> : <Archive size={15} />}
+                              label={archived ? 'Restaurar' : 'Arquivar'}
+                              disabled={mutatingLeadId === candidato.id}
+                              variant="warning"
+                              iconOnly
+                              onClick={() => updateLeadStatus('candidato', candidato, archived ? 'restore' : 'archive')}
+                            />
+                            <RowActionButton
+                              icon={<Trash2 size={15} />}
+                              label="Excluir"
+                              disabled={mutatingLeadId === candidato.id}
+                              variant="danger"
+                              iconOnly
+                              onClick={() => deleteLead('candidato', candidato)}
+                            />
                           </div>
                         </td>
                       </tr>
@@ -590,7 +1569,9 @@ export default function AdminDashboard({
               )}
             </div>
           </>
-        ) : (
+        )}
+
+        {activeTab === 'empresas' && (
           <>
             <div className={styles.filterGrid}>
               <label>
@@ -638,6 +1619,14 @@ export default function AdminDashboard({
               <table className={styles.table}>
                 <thead>
                   <tr>
+                    <th>
+                      <input
+                        aria-label="Selecionar empresas filtradas"
+                        type="checkbox"
+                        checked={allCurrentFilteredSelected}
+                        onChange={toggleAllCurrentSelection}
+                      />
+                    </th>
                     <th>Contato</th>
                     <th>Empresa</th>
                     <th>Vaga</th>
@@ -649,6 +1638,7 @@ export default function AdminDashboard({
                 </thead>
                 <tbody>
                   {filteredEmpresas.map(empresa => {
+                    const archived = isArchived(empresa)
                     const whatsappUrl = getWhatsAppUrl(
                       empresa.whatsapp,
                       `Olá, ${getText(empresa.nome, '')}! Recebemos sua solicitação de contato pela Porto Talent.`
@@ -656,30 +1646,65 @@ export default function AdminDashboard({
                     const mailUrl = getMailUrl(empresa.email, 'Porto Talent - solicitação de contato')
 
                     return (
-                      <tr key={empresa.id || `${empresa.email}-${empresa.created_at}`}>
-                        <td>
+                      <tr key={empresa.id || `${empresa.email}-${empresa.created_at}`} className={archived ? styles.archivedRow : ''}>
+                        <td data-label="Selecionar">
+                          <input
+                            aria-label={`Selecionar ${getText(empresa.nome, 'empresa')}`}
+                            type="checkbox"
+                            checked={Boolean(empresa.id && selectedEmpresaIds.includes(empresa.id))}
+                            onChange={() => toggleLeadSelection('empresas', empresa.id)}
+                          />
+                        </td>
+                        <td data-label="Contato">
                           <strong>{getText(empresa.nome)}</strong>
+                          {archived && <span className={styles.statusPill}>Arquivada</span>}
                           <span>{getText(empresa.email)}</span>
                           <span>{getText(empresa.whatsapp)}</span>
                         </td>
-                        <td>
+                        <td data-label="Empresa">
                           <strong>{getText(empresa.empresa)}</strong>
                         </td>
-                        <td>{getText(empresa.vaga)}</td>
-                        <td>
+                        <td data-label="Vaga">{getText(empresa.vaga)}</td>
+                        <td data-label="Prazo">
                           <span className={getPrazoBadgeClass(empresa.prazo)}>{getText(empresa.prazo)}</span>
                         </td>
-                        <td className={styles.messageCell}>{getText(empresa.mensagem)}</td>
-                        <td>{formatDate(empresa.created_at)}</td>
-                        <td>
+                        <td className={styles.messageCell} data-label="Mensagem">{getText(empresa.mensagem)}</td>
+                        <td data-label="Recebido">{formatDate(empresa.created_at)}</td>
+                        <td data-label="Ações">
                           <div className={styles.rowActions}>
                             <ActionLink
                               href={whatsappUrl}
                               icon={<MessageCircle size={15} />}
                               label="WhatsApp"
                               variant="success"
+                              iconOnly
                             />
-                            <ActionLink href={mailUrl} icon={<Mail size={15} />} label="E-mail" />
+                            <ActionLink href={mailUrl} icon={<Mail size={15} />} label="E-mail" iconOnly />
+                            <button
+                              aria-label="Ver detalhes"
+                              className={styles.actionIconButton}
+                              title="Ver detalhes"
+                              type="button"
+                              onClick={() => openLeadDetails('empresa', empresa)}
+                            >
+                              <Info size={15} />
+                            </button>
+                            <RowActionButton
+                              icon={archived ? <ArchiveRestore size={15} /> : <Archive size={15} />}
+                              label={archived ? 'Restaurar' : 'Arquivar'}
+                              disabled={mutatingLeadId === empresa.id}
+                              variant="warning"
+                              iconOnly
+                              onClick={() => updateLeadStatus('empresa', empresa, archived ? 'restore' : 'archive')}
+                            />
+                            <RowActionButton
+                              icon={<Trash2 size={15} />}
+                              label="Excluir"
+                              disabled={mutatingLeadId === empresa.id}
+                              variant="danger"
+                              iconOnly
+                              onClick={() => deleteLead('empresa', empresa)}
+                            />
                           </div>
                         </td>
                       </tr>
@@ -693,6 +1718,302 @@ export default function AdminDashboard({
               )}
             </div>
           </>
+        )}
+
+        {activeTab === 'kanban' && (
+          <div className={styles.kanbanShell}>
+            <aside className={styles.boardSidebar}>
+              <form className={styles.boardCreateForm} onSubmit={createBoard}>
+                <label>
+                  Nova seleção
+                  <input
+                    value={newBoardTitle}
+                    onChange={event => setNewBoardTitle(event.target.value)}
+                    placeholder="Ex: Seleção vendedor"
+                  />
+                </label>
+                <button className={styles.primaryMiniButton} type="submit" disabled={kanbanLoading || !newBoardTitle.trim()}>
+                  <Plus size={15} />
+                  Criar
+                </button>
+              </form>
+
+              <div className={styles.boardList}>
+                {boards.map(board => (
+                  <button
+                    key={board.id}
+                    className={activeBoard?.id === board.id ? styles.boardButtonActive : styles.boardButton}
+                    type="button"
+                    onClick={() => {
+                      setActiveBoardId(board.id)
+                      setEditingBoardTitle(false)
+                      setEditingStageId('')
+                    }}
+                  >
+                    <Columns3 size={15} />
+                    <span>{board.title}</span>
+                  </button>
+                ))}
+              </div>
+            </aside>
+
+            <div className={styles.kanbanMain}>
+              {activeBoard ? (
+                <>
+                  <div className={styles.kanbanHeader}>
+                    <div>
+                      <span className={styles.kicker}>Seleção</span>
+                      {editingBoardTitle ? (
+                        <form className={styles.titleEditForm} onSubmit={updateBoardTitle}>
+                          <input
+                            value={boardTitleDraft}
+                            onChange={event => setBoardTitleDraft(event.target.value)}
+                            aria-label="Título da seleção"
+                          />
+                          <button className={styles.iconButton} type="submit" aria-label="Salvar título">
+                            <Save size={15} />
+                          </button>
+                          <button className={styles.iconButton} type="button" aria-label="Cancelar edição" onClick={() => setEditingBoardTitle(false)}>
+                            <X size={15} />
+                          </button>
+                        </form>
+                      ) : (
+                        <div className={styles.titleRow}>
+                          <h2>{activeBoard.title}</h2>
+                          <button
+                            className={styles.iconButton}
+                            type="button"
+                            aria-label="Editar título da seleção"
+                            onClick={() => {
+                              setBoardTitleDraft(activeBoard.title)
+                              setEditingBoardTitle(true)
+                            }}
+                          >
+                            <Pencil size={15} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className={styles.headerActions}>
+                      <button className={`${styles.secondaryButton} ${styles.actionButtonWarning}`} type="button" onClick={() => archiveBoard(activeBoard)}>
+                        <Archive size={15} />
+                        Arquivar seleção
+                      </button>
+                      <button className={`${styles.secondaryButton} ${styles.actionButtonDanger}`} type="button" onClick={() => deleteBoard(activeBoard)}>
+                        <Trash2 size={15} />
+                        Excluir seleção
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className={styles.kanbanForms}>
+                    <form className={styles.inlineForm} onSubmit={createStage}>
+                      <input
+                        value={newStageTitle}
+                        onChange={event => setNewStageTitle(event.target.value)}
+                        placeholder="Nome da nova etapa"
+                      />
+                      <button className={styles.secondaryButton} type="submit" disabled={kanbanLoading || !newStageTitle.trim()}>
+                        <Plus size={15} />
+                        Etapa
+                      </button>
+                    </form>
+
+                    <form className={styles.inlineForm} onSubmit={addCandidateToBoard}>
+                      <div className={styles.candidateSearchWrap}>
+                        <input
+                          value={candidateSearch}
+                          onFocus={() => setCandidateSearchOpen(true)}
+                          onBlur={() => window.setTimeout(() => setCandidateSearchOpen(false), 140)}
+                          onChange={event => {
+                            setCandidateSearch(event.target.value)
+                            setSelectedCandidateId('')
+                            setCandidateSearchOpen(true)
+                          }}
+                          placeholder="Pesquisar candidato por nome, cargo, e-mail ou WhatsApp"
+                          aria-label="Pesquisar candidato"
+                          autoComplete="off"
+                        />
+                        {candidateSearchOpen && (
+                          <div className={styles.candidateSearchResults}>
+                            {filteredKanbanCandidates.length > 0 ? (
+                              filteredKanbanCandidates.map(candidato => (
+                                <button
+                                  key={candidato.id}
+                                  type="button"
+                                  onMouseDown={event => event.preventDefault()}
+                                  onClick={() => {
+                                    setSelectedCandidateId(candidato.id || '')
+                                    setCandidateSearch(`${getText(candidato.nome)} - ${getText(candidato.cargo_atual)}`)
+                                    setCandidateSearchOpen(false)
+                                  }}
+                                >
+                                  <strong>{getText(candidato.nome)}</strong>
+                                  <span>{getText(candidato.cargo_atual)} · {getText(candidato.whatsapp)}</span>
+                                </button>
+                              ))
+                            ) : (
+                              <div className={styles.candidateSearchEmpty}>Nenhum candidato disponível para esta seleção.</div>
+                            )}
+                          </div>
+                        )}
+                        {selectedKanbanCandidate && (
+                          <span className={styles.selectedCandidatePill}>
+                            Selecionado: {getText(selectedKanbanCandidate.nome)}
+                          </span>
+                        )}
+                      </div>
+                      <select value={effectiveSelectedStageId} onChange={event => setSelectedStageId(event.target.value)}>
+                        {activeBoard.stages.map(stage => (
+                          <option key={stage.id} value={stage.id}>
+                            {stage.title}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        className={styles.secondaryButton}
+                        type="submit"
+                        disabled={kanbanLoading || !selectedCandidateId || !effectiveSelectedStageId}
+                      >
+                        <Plus size={15} />
+                        Adicionar
+                      </button>
+                    </form>
+                  </div>
+
+                  <div className={styles.kanbanColumns}>
+                    {activeBoard.stages.map((stage, stageIndex) => (
+                      <section
+                        key={stage.id}
+                        className={styles.kanbanColumn}
+                        onDragOver={event => event.preventDefault()}
+                        onDrop={() => {
+                          if (draggedCardId) void moveCard(draggedCardId, stage.id)
+                        }}
+                      >
+                        <header className={styles.kanbanColumnHeader}>
+                          <div>
+                            {editingStageId === stage.id ? (
+                              <form
+                                className={styles.titleEditForm}
+                                onSubmit={event => {
+                                  event.preventDefault()
+                                  void updateStageTitle(stage)
+                                }}
+                              >
+                                <input
+                                  value={stageTitleDraft}
+                                  onChange={event => setStageTitleDraft(event.target.value)}
+                                  aria-label="Título da etapa"
+                                />
+                                <button className={styles.iconButton} type="submit" aria-label="Salvar etapa">
+                                  <Save size={14} />
+                                </button>
+                                <button className={styles.iconButton} type="button" aria-label="Cancelar edição" onClick={() => setEditingStageId('')}>
+                                  <X size={14} />
+                                </button>
+                              </form>
+                            ) : (
+                              <strong>{stage.title}</strong>
+                            )}
+                            <span>{stage.cards.length} candidatos</span>
+                          </div>
+                          <div className={styles.columnActions}>
+                            <button
+                              className={styles.iconButton}
+                              type="button"
+                              onClick={() => moveStage(stage, 'up')}
+                              disabled={stageIndex === 0 || kanbanLoading}
+                              aria-label="Mover etapa para a esquerda"
+                            >
+                              <ArrowLeft size={15} />
+                            </button>
+                            <button
+                              className={styles.iconButton}
+                              type="button"
+                              onClick={() => moveStage(stage, 'down')}
+                              disabled={stageIndex === activeBoard.stages.length - 1 || kanbanLoading}
+                              aria-label="Mover etapa para a direita"
+                            >
+                              <ArrowRight size={15} />
+                            </button>
+                            <button
+                              className={styles.iconButton}
+                              type="button"
+                              onClick={() => {
+                                setEditingStageId(stage.id)
+                                setStageTitleDraft(stage.title)
+                              }}
+                              aria-label="Editar etapa"
+                            >
+                              <Pencil size={15} />
+                            </button>
+                            <button className={styles.iconButton} type="button" onClick={() => deleteStage(stage)} aria-label="Excluir etapa">
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </header>
+
+                        <div className={styles.kanbanCards}>
+                          {stage.cards.map(card => {
+                            const candidato = card.candidato
+                            const name = getText(candidato?.nome, 'Candidato excluído')
+
+                            return (
+                              <article
+                                key={card.id}
+                                className={styles.kanbanCard}
+                                draggable
+                                onDragStart={() => setDraggedCardId(card.id)}
+                                onDragEnd={() => setDraggedCardId('')}
+                              >
+                                <div className={styles.kanbanCardHandle}>
+                                  <GripVertical size={15} />
+                                </div>
+                                <div>
+                                  <button
+                                    className={styles.kanbanCardInfoButton}
+                                    type="button"
+                                    disabled={!candidato}
+                                    onClick={() => {
+                                      if (candidato) openLeadDetails('candidato', candidato)
+                                    }}
+                                  >
+                                    <strong>{name}</strong>
+                                    <span>{getText(candidato?.cargo_atual)}</span>
+                                    <span>{getText(candidato?.whatsapp)}</span>
+                                  </button>
+                                  <textarea
+                                    className={styles.cardNotes}
+                                    defaultValue={getText(card.notes, '')}
+                                    placeholder="Observação interna"
+                                    onBlur={event => {
+                                      if (event.target.value.trim() !== getText(card.notes, '')) {
+                                        void updateCardNotes(card, event.target.value)
+                                      }
+                                    }}
+                                  />
+                                </div>
+                                <button className={styles.iconButton} type="button" onClick={() => deleteCard(card)} aria-label="Remover candidato da etapa">
+                                  <X size={14} />
+                                </button>
+                              </article>
+                            )
+                          })}
+
+                          {stage.cards.length === 0 && (
+                            <div className={styles.kanbanEmpty}>Arraste candidatos para esta etapa.</div>
+                          )}
+                        </div>
+                      </section>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className={styles.emptyState}>Crie uma seleção para começar a montar o kanban.</div>
+              )}
+            </div>
+          </div>
         )}
       </section>
 
@@ -725,6 +2046,152 @@ export default function AdminDashboard({
             </div>
             <iframe className={styles.curriculoFrame} src={curriculoViewer.url} title={curriculoViewer.nome} />
           </div>
+        </div>
+      )}
+
+      {selectedLead && (
+        <div className={styles.drawerBackdrop} role="dialog" aria-modal="true" aria-label="Detalhes do lead">
+          <aside className={styles.detailDrawer}>
+            <header className={styles.drawerHeader}>
+              <div>
+                <span>{selectedLead.type === 'candidato' ? 'Currículo' : 'Empresa'}</span>
+                <strong>{getText(selectedLead.lead.nome)}</strong>
+              </div>
+              <button className={styles.iconButton} type="button" onClick={() => setSelectedLead(null)} aria-label="Fechar detalhes">
+                <X size={18} />
+              </button>
+            </header>
+
+            <div className={styles.drawerSection}>
+              <div className={styles.drawerActions}>
+                <ActionLink
+                  href={getWhatsAppUrl(selectedLead.lead.whatsapp, `Olá, ${getText(selectedLead.lead.nome, '')}! Aqui é da Porto Talent.`)}
+                  icon={<MessageCircle size={15} />}
+                  label="WhatsApp"
+                  variant="success"
+                />
+                <ActionLink
+                  href={getMailUrl(selectedLead.lead.email, 'Porto Talent')}
+                  icon={<Mail size={15} />}
+                  label="E-mail"
+                />
+                {selectedLead.type === 'candidato' && Boolean((selectedLead.lead as CandidatoLead).cv_url) && (
+                  <button className={styles.actionButton} type="button" onClick={() => openCurriculo(selectedLead.lead as CandidatoLead)}>
+                    <Eye size={15} />
+                    Currículo
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className={styles.drawerSection}>
+              <h3>Dados principais</h3>
+              <dl className={styles.detailGrid}>
+                <div><dt>E-mail</dt><dd>{getText(selectedLead.lead.email)}</dd></div>
+                <div><dt>WhatsApp</dt><dd>{getText(selectedLead.lead.whatsapp)}</dd></div>
+                <div><dt>Status</dt><dd>{isArchived(selectedLead.lead) ? 'Arquivado' : getText(selectedLead.lead.status, 'Novo')}</dd></div>
+                <div><dt>Recebido</dt><dd>{formatDate(selectedLead.lead.created_at)}</dd></div>
+                {selectedLead.type === 'empresa' ? (
+                  <>
+                    <div><dt>Empresa</dt><dd>{getText((selectedLead.lead as EmpresaLead).empresa)}</dd></div>
+                    <div><dt>Vaga</dt><dd>{getText((selectedLead.lead as EmpresaLead).vaga)}</dd></div>
+                    <div><dt>Prazo</dt><dd>{getText((selectedLead.lead as EmpresaLead).prazo)}</dd></div>
+                    <div><dt>Mensagem</dt><dd>{getText((selectedLead.lead as EmpresaLead).mensagem)}</dd></div>
+                  </>
+                ) : (
+                  <>
+                    <div><dt>Cidade</dt><dd>{getText((selectedLead.lead as CandidatoLead).cidade_estado)}</dd></div>
+                    <div><dt>Cargo</dt><dd>{getText((selectedLead.lead as CandidatoLead).cargo_atual)}</dd></div>
+                    <div><dt>Área</dt><dd>{getText((selectedLead.lead as CandidatoLead).area_atuacao)}</dd></div>
+                    <div><dt>Experiência</dt><dd>{getText((selectedLead.lead as CandidatoLead).experiencia)}</dd></div>
+                    <div><dt>Salário</dt><dd>{getText((selectedLead.lead as CandidatoLead).pretensao_salarial)}</dd></div>
+                    <div><dt>LinkedIn</dt><dd>{getText((selectedLead.lead as CandidatoLead).linkedin)}</dd></div>
+                  </>
+                )}
+              </dl>
+            </div>
+
+            <div className={styles.drawerSection}>
+              <h3>Origem</h3>
+              <dl className={styles.detailGrid}>
+                <div><dt>Origem</dt><dd>{getText(selectedLead.lead.origem)}</dd></div>
+                <div><dt>UTM source</dt><dd>{getText(selectedLead.lead.utm_source)}</dd></div>
+                <div><dt>UTM medium</dt><dd>{getText(selectedLead.lead.utm_medium)}</dd></div>
+                <div><dt>UTM campaign</dt><dd>{getText(selectedLead.lead.utm_campaign)}</dd></div>
+                <div><dt>Página</dt><dd>{getText(selectedLead.lead.landing_path)}</dd></div>
+                <div><dt>Referência</dt><dd>{getText(selectedLead.lead.referrer)}</dd></div>
+              </dl>
+            </div>
+
+            <div className={styles.drawerSection}>
+              <h3>Observações internas</h3>
+              <textarea
+                className={styles.notesTextarea}
+                value={notesDraft}
+                onChange={event => setNotesDraft(event.target.value)}
+                placeholder="Adicione observações sobre atendimento, triagem ou próximos passos."
+              />
+              <button className={styles.primaryMiniButton} type="button" onClick={saveLeadNotes} disabled={mutatingLeadId === selectedLead.lead.id}>
+                <Save size={15} />
+                Salvar observações
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {confirmation && (
+        <div className={styles.confirmBackdrop} role="dialog" aria-modal="true" aria-label={confirmation.title}>
+          <div className={styles.confirmModal}>
+            <div className={styles.confirmIcon}>
+              <AlertTriangle size={24} />
+            </div>
+            <h2>{confirmation.title}</h2>
+            <p>{confirmation.message}</p>
+            {confirmation.warning && <strong>{confirmation.warning}</strong>}
+            <div className={styles.confirmActions}>
+              <button className={styles.secondaryButton} type="button" onClick={() => setConfirmation(null)}>
+                Cancelar
+              </button>
+              <button
+                className={`${styles.secondaryButton} ${
+                  confirmation.tone === 'danger'
+                    ? styles.actionButtonDanger
+                    : confirmation.tone === 'warning'
+                      ? styles.actionButtonWarning
+                      : ''
+                }`}
+                type="button"
+                onClick={() => {
+                  const onConfirm = confirmation.onConfirm
+                  setConfirmation(null)
+                  void onConfirm()
+                }}
+              >
+                {confirmation.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toasts.length > 0 && (
+        <div className={styles.toastStack} aria-live="polite">
+          {toasts.map(toast => (
+            <div
+              className={`${styles.toast} ${
+                toast.tone === 'success'
+                  ? styles.toastSuccess
+                  : toast.tone === 'error'
+                    ? styles.toastError
+                    : styles.toastInfo
+              }`}
+              key={toast.id}
+            >
+              {toast.tone === 'success' ? <CheckCircle2 size={16} /> : toast.tone === 'error' ? <AlertTriangle size={16} /> : <Info size={16} />}
+              <span>{toast.message}</span>
+            </div>
+          ))}
         </div>
       )}
     </main>

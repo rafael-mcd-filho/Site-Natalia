@@ -36,6 +36,17 @@ const phoneSchema = z
   .refine(value => value.replace(/\D/g, '').length >= 10, 'Informe um WhatsApp válido.')
   .refine(value => value.replace(/\D/g, '').length <= 13, 'Informe um WhatsApp válido.')
 
+const optionalTrackingText = z.string().trim().max(240).optional().or(z.literal(''))
+const trackingSchema = {
+  utm_source: optionalTrackingText,
+  utm_medium: optionalTrackingText,
+  utm_campaign: optionalTrackingText,
+  utm_term: optionalTrackingText,
+  utm_content: optionalTrackingText,
+  landing_path: z.string().trim().max(500).optional().or(z.literal('')),
+  referrer: z.string().trim().max(500).optional().or(z.literal('')),
+}
+
 const companySchema = z.object({
   tipo: z.literal('empresa'),
   nome: requiredText('Nome'),
@@ -47,6 +58,7 @@ const companySchema = z.object({
   mensagem: z.string().trim().max(1200, 'Mensagem está muito longa.').optional().or(z.literal('')),
   website: z.string().trim().optional(),
   lgpd: consentSchema,
+  ...trackingSchema,
 })
 
 const candidateSchema = z.object({
@@ -62,6 +74,7 @@ const candidateSchema = z.object({
   linkedin: z.string().trim().max(240, 'LinkedIn está muito longo.').optional().or(z.literal('')),
   website: z.string().trim().optional(),
   lgpd: consentSchema,
+  ...trackingSchema,
 })
 
 const allowedCvTypes = new Set([
@@ -100,6 +113,22 @@ function isRateLimited(key: string) {
   rateLimitStore.set(key, current)
 
   return current.count > RATE_LIMIT_MAX
+}
+
+function getTrackingInsert(data: object, request: NextRequest) {
+  const values = data as Record<string, unknown>
+  const text = (key: string, max = 240) => String(values[key] ?? '').trim().slice(0, max) || null
+
+  return {
+    utm_source: text('utm_source'),
+    utm_medium: text('utm_medium'),
+    utm_campaign: text('utm_campaign'),
+    utm_term: text('utm_term'),
+    utm_content: text('utm_content'),
+    landing_path: text('landing_path', 500),
+    referrer: text('referrer', 500),
+    user_agent: request.headers.get('user-agent')?.slice(0, 500) || null,
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -171,6 +200,7 @@ export async function POST(request: NextRequest) {
         cv_url,
         cv_nome,
         origem: 'site',
+        ...getTrackingInsert(lead, request),
       })
 
       if (error) {
@@ -202,6 +232,7 @@ export async function POST(request: NextRequest) {
       mensagem: lead.mensagem || null,
       lgpd: lead.lgpd,
       origem: 'site',
+      ...getTrackingInsert(lead, request),
     })
 
     if (error) {

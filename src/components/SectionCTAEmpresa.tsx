@@ -4,6 +4,7 @@ import { ArrowRight, CheckCircle2, Clock, Handshake, Send, ShieldCheck } from 'l
 import { useState, FormEvent } from 'react'
 import Link from 'next/link'
 import { trackEvent } from '@/lib/tracking'
+import { getLeadTracking } from '@/lib/lead-tracking'
 
 const prazoOpcoes = ['Urgente', 'Em até 30 dias', 'Em até 60 dias', 'Ainda planejando']
 
@@ -14,6 +15,7 @@ export default function SectionCTAEmpresa() {
   })
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const set = (k: string, v: string | boolean) => setForm(p => ({ ...p, [k]: v }))
 
@@ -27,8 +29,19 @@ export default function SectionCTAEmpresa() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    const errors: Record<string, string> = {}
+    if (!form.nome.trim()) errors.nome = 'Informe seu nome.'
+    if (!form.empresa.trim()) errors.empresa = 'Informe a empresa.'
+    if (!form.email.trim()) errors.email = 'Informe seu e-mail.'
+    if (form.whatsapp.replace(/\D/g, '').length < 10) errors.whatsapp = 'Informe um WhatsApp válido.'
+    if (!form.vaga.trim()) errors.vaga = 'Informe a vaga.'
+    if (!form.prazo.trim()) errors.prazo = 'Selecione o prazo.'
     if (!form.lgpd) {
-      setErrorMessage('Aceite a Política de Privacidade para continuar.')
+      errors.lgpd = 'Aceite a Política de Privacidade para continuar.'
+    }
+    setFieldErrors(errors)
+    if (Object.keys(errors).length > 0) {
+      setErrorMessage(Object.values(errors)[0] || 'Revise os campos.')
       setStatus('error')
       return
     }
@@ -39,7 +52,7 @@ export default function SectionCTAEmpresa() {
       const response = await fetch('/api/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo: 'empresa', ...form }),
+        body: JSON.stringify({ tipo: 'empresa', ...form, ...getLeadTracking() }),
       })
       const data = await response.json().catch(() => ({}))
 
@@ -141,10 +154,15 @@ export default function SectionCTAEmpresa() {
                     <input
                       type={f.type} required={f.required} placeholder={f.label}
                       value={form[f.k as keyof typeof form] as string}
-                      onChange={e => set(f.k, e.target.value)}
+                      aria-invalid={Boolean(fieldErrors[f.k])}
+                      onChange={e => {
+                        set(f.k, e.target.value)
+                        setFieldErrors(errors => ({ ...errors, [f.k]: '' }))
+                      }}
                     />
                     <label>{f.label}</label>
                     <div className="focus-line" />
+                    {fieldErrors[f.k] && <span className="field-error">{fieldErrors[f.k]}</span>}
                   </div>
                 ))}
 
@@ -152,25 +170,50 @@ export default function SectionCTAEmpresa() {
                   <input
                     type="tel" placeholder="WhatsApp" required
                     value={form.whatsapp}
-                    onChange={e => set('whatsapp', formatPhone(e.target.value))}
+                    aria-invalid={Boolean(fieldErrors.whatsapp)}
+                    onChange={e => {
+                      set('whatsapp', formatPhone(e.target.value))
+                      setFieldErrors(errors => ({ ...errors, whatsapp: '' }))
+                    }}
                   />
                   <label>WhatsApp</label>
                   <div className="focus-line" />
+                  {fieldErrors.whatsapp && <span className="field-error">{fieldErrors.whatsapp}</span>}
                 </div>
 
                 <div className={`input-editorial ${form.vaga ? 'has-value' : ''}`}>
-                  <input type="text" placeholder="Vaga" required value={form.vaga} onChange={e => set('vaga', e.target.value)} />
+                  <input
+                    type="text"
+                    placeholder="Vaga"
+                    required
+                    value={form.vaga}
+                    aria-invalid={Boolean(fieldErrors.vaga)}
+                    onChange={e => {
+                      set('vaga', e.target.value)
+                      setFieldErrors(errors => ({ ...errors, vaga: '' }))
+                    }}
+                  />
                   <label>Vaga que precisa preencher</label>
                   <div className="focus-line" />
+                  {fieldErrors.vaga && <span className="field-error">{fieldErrors.vaga}</span>}
                 </div>
 
                 <div className={`input-editorial ${form.prazo ? 'has-value' : ''}`}>
-                  <select required value={form.prazo} onChange={e => set('prazo', e.target.value)}>
+                  <select
+                    required
+                    value={form.prazo}
+                    aria-invalid={Boolean(fieldErrors.prazo)}
+                    onChange={e => {
+                      set('prazo', e.target.value)
+                      setFieldErrors(errors => ({ ...errors, prazo: '' }))
+                    }}
+                  >
                     <option value="" disabled>Quando pretende contratar?</option>
                     {prazoOpcoes.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
                   <label>Quando pretende contratar?</label>
                   <div className="focus-line" />
+                  {fieldErrors.prazo && <span className="field-error">{fieldErrors.prazo}</span>}
                 </div>
 
                 <div className={`input-editorial ${form.mensagem ? 'has-value' : ''}`}>
@@ -180,7 +223,14 @@ export default function SectionCTAEmpresa() {
                 </div>
 
                 <label className="checkbox-custom" style={{ marginBottom: 28 }}>
-                  <input type="checkbox" checked={form.lgpd} onChange={e => set('lgpd', e.target.checked)} />
+                  <input
+                    type="checkbox"
+                    checked={form.lgpd}
+                    onChange={e => {
+                      set('lgpd', e.target.checked)
+                      setFieldErrors(errors => ({ ...errors, lgpd: '' }))
+                    }}
+                  />
                   <div className="checkbox-box">
                     <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
                       <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -193,6 +243,7 @@ export default function SectionCTAEmpresa() {
                     </Link>.
                   </span>
                 </label>
+                {fieldErrors.lgpd && <span className="field-error field-error--spaced">{fieldErrors.lgpd}</span>}
 
                 <button type="submit" className="btn-creme" disabled={status === 'loading'} aria-busy={status === 'loading'}>
                   <span className="button-content">

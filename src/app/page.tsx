@@ -15,10 +15,12 @@ import Footer from '@/components/Footer'
 import WhatsAppButton from '@/components/WhatsAppButton'
 import RevealObserver from '@/components/RevealObserver'
 import SectionConnector from '@/components/SectionConnector'
+import LocalBusinessSchema from '@/components/LocalBusinessSchema'
 
 export default function Home() {
   return (
     <>
+      <LocalBusinessSchema />
       <RevealObserver />
       <Header />
       <main>

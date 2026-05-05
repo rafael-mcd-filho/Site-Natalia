@@ -9,22 +9,16 @@ const depoimentos = [
   {
     texto: 'O briefing trouxe clareza para a vaga e reduziu muito o tempo até chegarem finalistas com perfil compatível.',
     nome: 'GBella',
-    cargo: 'Beleza e varejo',
-    empresa: 'Cliente Porto Talent',
     foto: '/imagens/depoimentos/rafaela-mendonca.svg',
   },
   {
     texto: 'A Porto Talent entendeu a rotina da operação e apresentou candidatos mais alinhados ao atendimento da clínica.',
     nome: 'Life Laser',
-    cargo: 'Estética e atendimento',
-    empresa: 'Cliente Porto Talent',
     foto: '/imagens/depoimentos/thiago-albuquerque.svg',
   },
   {
     texto: 'Recebemos uma seleção objetiva, com parecer claro sobre cada perfil. O processo ficou mais simples para decidir.',
     nome: 'ADCOS',
-    cargo: 'Cosméticos e varejo',
-    empresa: 'Cliente Porto Talent',
     foto: '/imagens/depoimentos/carlos-henrique-souza.svg',
   },
 ]
@@ -49,7 +43,7 @@ export default function SectionProvasSocial() {
             <span className="gold-line" />CONFIANÇA<span className="gold-line" />
           </p>
           <h2 className="reveal reveal-delay-1 depoimentos-title">
-            Empresas que já confiaram<br /><strong>na Porto Talent.</strong>
+            Empresas que confiam<br /><strong>na Porto Talent.</strong>
           </h2>
 
           <div className="reveal reveal-delay-2 parceiros-marquee" aria-label="Empresas atendidas">
@@ -80,8 +74,6 @@ export default function SectionProvasSocial() {
               />
               <div>
                 <h3>{depoimento.nome}</h3>
-                <p>{depoimento.cargo}</p>
-                <p>{depoimento.empresa}</p>
               </div>
             </div>
 

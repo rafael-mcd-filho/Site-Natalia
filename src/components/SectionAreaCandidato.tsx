@@ -4,6 +4,7 @@ import { CheckCircle2, FileCheck, UploadCloud } from 'lucide-react'
 import Link from 'next/link'
 import { useState, useRef, FormEvent } from 'react'
 import { trackEvent } from '@/lib/tracking'
+import { getLeadTracking } from '@/lib/lead-tracking'
 
 const areas = ['Comercial', 'Administrativo', 'Operacional', 'Outro']
 const experiencias = ['Menos de 1 ano', '1 a 3 anos', '3 a 5 anos', 'Mais de 5 anos']
@@ -18,6 +19,7 @@ export default function SectionAreaCandidato() {
   const [dragOver, setDragOver] = useState(false)
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const fileRef = useRef<HTMLInputElement>(null)
 
   const set = (k: string, v: string | boolean) => setForm(p => ({ ...p, [k]: v }))
@@ -32,17 +34,30 @@ export default function SectionAreaCandidato() {
 
   const handleFile = (f: File) => {
     const allowed = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-    if (!allowed.includes(f.type)) { setErrorMessage('Use PDF, DOC ou DOCX.'); setStatus('error'); return }
-    if (f.size > 5 * 1024 * 1024) { setErrorMessage('Arquivo maior que 5MB.'); setStatus('error'); return }
+    if (!allowed.includes(f.type)) { setErrorMessage('Use PDF, DOC ou DOCX.'); setStatus('error'); setFieldErrors(errors => ({ ...errors, curriculo: 'Use PDF, DOC ou DOCX.' })); return }
+    if (f.size > 5 * 1024 * 1024) { setErrorMessage('Arquivo maior que 5MB.'); setStatus('error'); setFieldErrors(errors => ({ ...errors, curriculo: 'Arquivo maior que 5MB.' })); return }
     setErrorMessage('')
     setStatus('idle')
+    setFieldErrors(errors => ({ ...errors, curriculo: '' }))
     setArquivo(f)
   }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    const errors: Record<string, string> = {}
+    if (!form.nome.trim()) errors.nome = 'Informe seu nome.'
+    if (!form.email.trim()) errors.email = 'Informe seu e-mail.'
+    if (form.whatsapp.replace(/\D/g, '').length < 10) errors.whatsapp = 'Informe um WhatsApp válido.'
+    if (!form.cidade_estado.trim()) errors.cidade_estado = 'Informe sua cidade e estado.'
+    if (!form.cargo_atual.trim()) errors.cargo_atual = 'Informe seu cargo.'
+    if (!form.area_atuacao.trim()) errors.area_atuacao = 'Selecione sua área.'
+    if (!form.experiencia.trim()) errors.experiencia = 'Selecione sua experiência.'
     if (!form.lgpd) {
-      setErrorMessage('Aceite a Política de Privacidade para continuar.')
+      errors.lgpd = 'Aceite a Política de Privacidade para continuar.'
+    }
+    setFieldErrors(errors)
+    if (Object.keys(errors).length > 0) {
+      setErrorMessage(Object.values(errors)[0] || 'Revise os campos.')
       setStatus('error')
       return
     }
@@ -53,6 +68,9 @@ export default function SectionAreaCandidato() {
       const payload = new FormData()
       payload.set('tipo', 'candidato')
       Object.entries(form).forEach(([key, value]) => {
+        payload.set(key, String(value))
+      })
+      Object.entries(getLeadTracking()).forEach(([key, value]) => {
         payload.set(key, String(value))
       })
       if (arquivo) payload.set('curriculo', arquivo)
@@ -172,29 +190,56 @@ export default function SectionAreaCandidato() {
                         <label>{f.label}</label>
                         {f.k === 'whatsapp' ? (
                           <input type="tel" required={f.required} value={form[f.k as keyof typeof form] as string}
-                            onChange={e => set(f.k, formatPhone(e.target.value))} />
+                            aria-invalid={Boolean(fieldErrors[f.k])}
+                            onChange={e => {
+                              set(f.k, formatPhone(e.target.value))
+                              setFieldErrors(errors => ({ ...errors, [f.k]: '' }))
+                            }} />
                         ) : (
                           <input type={f.type} required={f.required}
                             value={form[f.k as keyof typeof form] as string}
-                            onChange={e => set(f.k, e.target.value)} />
+                            aria-invalid={Boolean(fieldErrors[f.k])}
+                            onChange={e => {
+                              set(f.k, e.target.value)
+                              setFieldErrors(errors => ({ ...errors, [f.k]: '' }))
+                            }} />
                         )}
+                        {fieldErrors[f.k] && <span className="field-error">{fieldErrors[f.k]}</span>}
                       </div>
                     ))}
 
                     <div className="input-traditional" style={{ gridColumn: 'span 1' }}>
                       <label>Área de atuação</label>
-                      <select required value={form.area_atuacao} onChange={e => set('area_atuacao', e.target.value)}>
+                      <select
+                        required
+                        value={form.area_atuacao}
+                        aria-invalid={Boolean(fieldErrors.area_atuacao)}
+                        onChange={e => {
+                          set('area_atuacao', e.target.value)
+                          setFieldErrors(errors => ({ ...errors, area_atuacao: '' }))
+                        }}
+                      >
                         <option value="" disabled>Selecione...</option>
                         {areas.map(a => <option key={a}>{a}</option>)}
                       </select>
+                      {fieldErrors.area_atuacao && <span className="field-error">{fieldErrors.area_atuacao}</span>}
                     </div>
 
                     <div className="input-traditional" style={{ gridColumn: 'span 1' }}>
                       <label>Experiência na área</label>
-                      <select required value={form.experiencia} onChange={e => set('experiencia', e.target.value)}>
+                      <select
+                        required
+                        value={form.experiencia}
+                        aria-invalid={Boolean(fieldErrors.experiencia)}
+                        onChange={e => {
+                          set('experiencia', e.target.value)
+                          setFieldErrors(errors => ({ ...errors, experiencia: '' }))
+                        }}
+                      >
                         <option value="" disabled>Selecione...</option>
                         {experiencias.map(x => <option key={x}>{x}</option>)}
                       </select>
+                      {fieldErrors.experiencia && <span className="field-error">{fieldErrors.experiencia}</span>}
                     </div>
 
                     <div className="input-traditional" style={{ gridColumn: 'span 1' }}>
@@ -252,10 +297,18 @@ export default function SectionAreaCandidato() {
                       <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" style={{ display: 'none' }}
                         onChange={e => { if (e.target.files?.[0]) handleFile(e.target.files[0]) }} />
                     </div>
+                    {fieldErrors.curriculo && <span className="field-error">{fieldErrors.curriculo}</span>}
                   </div>
 
                   <label className="checkbox-custom" style={{ marginBottom: 24 }}>
-                    <input type="checkbox" checked={form.lgpd} onChange={e => set('lgpd', e.target.checked)} />
+                    <input
+                      type="checkbox"
+                      checked={form.lgpd}
+                      onChange={e => {
+                        set('lgpd', e.target.checked)
+                        setFieldErrors(errors => ({ ...errors, lgpd: '' }))
+                      }}
+                    />
                     <div className="checkbox-box">
                       <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
                         <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -268,6 +321,7 @@ export default function SectionAreaCandidato() {
                       </Link>.
                     </span>
                   </label>
+                  {fieldErrors.lgpd && <span className="field-error field-error--spaced">{fieldErrors.lgpd}</span>}
 
                   <button
                     type="submit"

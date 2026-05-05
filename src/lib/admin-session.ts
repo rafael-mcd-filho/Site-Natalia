@@ -6,13 +6,15 @@ export const ADMIN_SESSION_SECONDS = 60 * 60 * 10
 const getSecret = () =>
   process.env.ADMIN_SESSION_SECRET ||
   process.env.ADMIN_PASSWORD ||
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  'porto-talent-admin-session'
+  (process.env.NODE_ENV === 'production' ? '' : 'porto-talent-local-admin-session')
 
 export const getAdminPassword = () => process.env.ADMIN_PASSWORD
 
-const sign = (payload: string) =>
-  crypto.createHmac('sha256', getSecret()).update(payload).digest('hex')
+const sign = (payload: string) => {
+  const secret = getSecret()
+  if (!secret) throw new Error('ADMIN_SESSION_SECRET is not configured.')
+  return crypto.createHmac('sha256', secret).update(payload).digest('hex')
+}
 
 const constantTimeEqual = (a: string, b: string) => {
   const hashA = crypto.createHash('sha256').update(a).digest()
