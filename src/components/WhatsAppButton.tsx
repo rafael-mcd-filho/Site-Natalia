@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react'
 import { trackEvent } from '@/lib/tracking'
 
 const whatsappNumber = '558387523450'
-const whatsappDisplay = '(83) 8752-3450'
 
 export default function WhatsAppButton() {
   const [visible, setVisible] = useState(false)
@@ -82,7 +81,6 @@ export default function WhatsAppButton() {
             <X size={14} aria-hidden="true" />
           </button>
           <p style={{ marginRight: 12, fontWeight: 500 }}>Fale com a Porto Talent</p>
-          <p style={{ marginRight: 12, marginTop: 4, color: '#128C3A', fontWeight: 600 }}>{whatsappDisplay}</p>
         </div>
       )}
 

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="Retrato de Carlos Henrique Souza">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f2e6d8"/>
+      <stop offset="1" stop-color="#6b5b45"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="240" fill="url(#bg)"/>
+  <circle cx="120" cy="103" r="46" fill="#8f5f42"/>
+  <path d="M78 91c5-34 28-52 62-45 25 5 38 22 41 51-31-11-67-9-103-6z" fill="#2a1d17"/>
+  <path d="M82 140c13 16 63 16 76 0-2 29-17 45-38 45s-36-16-38-45z" fill="#734a34"/>
+  <path d="M45 240c12-48 43-76 75-76s63 28 75 76H45z" fill="#202020"/>
+  <path d="M88 240c5-31 15-48 32-48s27 17 32 48H88z" fill="#dcd0bf"/>
+</svg>

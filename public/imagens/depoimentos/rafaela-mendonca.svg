@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="Retrato de Rafaela Mendonça">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7eadc"/>
+      <stop offset="1" stop-color="#b8935a"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="240" fill="url(#bg)"/>
+  <circle cx="120" cy="98" r="55" fill="#2d211c"/>
+  <circle cx="120" cy="106" r="42" fill="#e7bf9d"/>
+  <path d="M72 108c11-45 34-61 72-42 18 9 27 26 24 51-23-18-60-12-96-9z" fill="#1f1714"/>
+  <path d="M55 240c9-48 38-75 65-75s56 27 65 75H55z" fill="#0e0e0e"/>
+  <path d="M88 240c6-34 18-51 32-51s26 17 32 51H88z" fill="#f2e6d8" opacity=".9"/>
+</svg>

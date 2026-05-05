@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="Retrato de Thiago Albuquerque">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e8e0d4"/>
+      <stop offset="1" stop-color="#333333"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="240" fill="url(#bg)"/>
+  <circle cx="120" cy="102" r="48" fill="#c7926f"/>
+  <path d="M73 93c8-39 37-55 78-38 15 6 25 20 28 42-33-7-70-4-106-4z" fill="#17120f"/>
+  <path d="M72 240c6-43 28-72 48-72s42 29 48 72H72z" fill="#f2e6d8"/>
+  <path d="M40 240c12-52 44-78 80-78s68 26 80 78H40z" fill="#111827"/>
+  <path d="M93 178l27 35 27-35" fill="none" stroke="#b8935a" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

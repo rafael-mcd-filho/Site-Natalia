@@ -1,10 +1,11 @@
-type Bg = 'white' | 'bege-creme' | 'bege' | 'bege-quente'
+type Bg = 'white' | 'bege-creme' | 'bege' | 'bege-quente' | 'preto'
 
 const bgMap: Record<Bg, string> = {
   'white': '#FFFFFF',
   'bege-creme': '#FAF5EE',
   'bege': '#F2E6D8',
   'bege-quente': '#EDE0CC',
+  'preto': '#11100f',
 }
 
 export default function SectionConnector({ from, to }: { from: Bg; to: Bg }) {
