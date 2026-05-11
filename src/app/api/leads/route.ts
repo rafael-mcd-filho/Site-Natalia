@@ -83,6 +83,12 @@ const allowedCvTypes = new Set([
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ])
 
+const LEAD_WEBHOOK_TIMEOUT_MS = 8000
+const LEAD_WEBHOOK_URLS = {
+  empresa: 'https://webhook.rwsolucoesdigitais.com/webhook/empresanatalia',
+  candidato: 'https://webhook.rwsolucoesdigitais.com/webhook/candidatonatalia',
+} as const
+
 function getValidationMessage(error: z.ZodError) {
   return error.issues[0]?.message || 'Revise os dados enviados.'
 }
@@ -128,6 +134,35 @@ function getTrackingInsert(data: object, request: NextRequest) {
     landing_path: text('landing_path', 500),
     referrer: text('referrer', 500),
     user_agent: request.headers.get('user-agent')?.slice(0, 500) || null,
+  }
+}
+
+async function postLeadWebhook(type: keyof typeof LEAD_WEBHOOK_URLS, payload: Record<string, unknown>) {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), LEAD_WEBHOOK_TIMEOUT_MS)
+
+  try {
+    const response = await fetch(LEAD_WEBHOOK_URLS[type], {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      cache: 'no-store',
+      signal: controller.signal,
+    })
+
+    if (!response.ok) {
+      throw new Error(`Webhook ${type} returned ${response.status}`)
+    }
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+async function safePostLeadWebhook(type: keyof typeof LEAD_WEBHOOK_URLS, payload: Record<string, unknown>) {
+  try {
+    await postLeadWebhook(type, payload)
+  } catch (error) {
+    console.error(`Lead webhook failed for ${type}:`, error instanceof Error ? error.message : error)
   }
 }
 
@@ -186,7 +221,7 @@ export async function POST(request: NextRequest) {
       }
 
       const lead = parsed.data
-      const { error } = await supabase.from('leads_candidato').insert({
+      const leadInsert = {
         nome: lead.nome,
         email: lead.email,
         whatsapp: lead.whatsapp,
@@ -201,11 +236,28 @@ export async function POST(request: NextRequest) {
         cv_nome,
         origem: 'site',
         ...getTrackingInsert(lead, request),
-      })
+      }
+      const { data: savedLead, error } = await supabase
+        .from('leads_candidato')
+        .insert(leadInsert)
+        .select('*')
+        .single()
 
       if (error) {
         return NextResponse.json({ message: 'Não foi possível salvar o cadastro.' }, { status: 500 })
       }
+
+      let cv_signed_url: string | null = null
+      if (cv_url) {
+        const { data } = await supabase.storage.from('curriculos').createSignedUrl(cv_url, 60 * 60 * 24)
+        cv_signed_url = data?.signedUrl || null
+      }
+
+      await safePostLeadWebhook('candidato', {
+        tipo: 'candidato',
+        ...savedLead,
+        cv_signed_url,
+      })
 
       return NextResponse.json({ ok: true })
     }
@@ -222,7 +274,7 @@ export async function POST(request: NextRequest) {
     }
 
     const lead = parsed.data
-    const { error } = await supabase.from('leads_empresa').insert({
+    const leadInsert = {
       nome: lead.nome,
       empresa: lead.empresa,
       email: lead.email,
@@ -233,11 +285,21 @@ export async function POST(request: NextRequest) {
       lgpd: lead.lgpd,
       origem: 'site',
       ...getTrackingInsert(lead, request),
-    })
+    }
+    const { data: savedLead, error } = await supabase
+      .from('leads_empresa')
+      .insert(leadInsert)
+      .select('*')
+      .single()
 
     if (error) {
       return NextResponse.json({ message: 'Não foi possível salvar a solicitação.' }, { status: 500 })
     }
+
+    await safePostLeadWebhook('empresa', {
+      tipo: 'empresa',
+      ...savedLead,
+    })
 
     return NextResponse.json({ ok: true })
   } catch {

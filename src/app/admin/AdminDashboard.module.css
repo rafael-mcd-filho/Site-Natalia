@@ -2,7 +2,7 @@
   min-height: 100vh;
   background: #f6f4f0;
   color: #111827;
-  padding: 32px;
+  padding: 24px;
 }
 
 .loginShell {
@@ -97,12 +97,12 @@
 
 .header {
   display: grid;
-  gap: 18px;
-  margin-bottom: 24px;
+  gap: 14px;
+  margin-bottom: 18px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  padding: 18px;
+  padding: 16px;
 }
 
 .headerTop {
@@ -137,22 +137,22 @@
   gap: 6px;
   flex-wrap: wrap;
   border-top: 1px solid #eef2f7;
-  padding-top: 14px;
+  padding-top: 12px;
 }
 
 .headerMenu button {
-  min-height: 42px;
+  min-height: 36px;
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
   color: #475569;
-  padding: 0 16px;
+  padding: 0 13px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
   font: inherit;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -164,7 +164,8 @@
 
 .rowActions {
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
+  flex-wrap: nowrap;
 }
 
 .primaryButton,
@@ -235,7 +236,27 @@
 
 .clearButton {
   align-self: end;
-  min-height: 42px;
+  min-height: 36px;
+}
+
+.secondaryButtonActive {
+  border-color: #b8935a;
+  background: #fbfaf8;
+  color: #7c5a24;
+}
+
+.activeFiltersPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #111827;
+  color: #ffffff;
+  padding: 0 5px;
+  font-size: 11px;
+  line-height: 1;
 }
 
 .actionButton {
@@ -243,13 +264,45 @@
 }
 
 .actionIconButton {
-  width: 38px;
-  min-width: 38px;
+  width: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  height: 24px;
+  border-radius: 5px;
   padding: 0;
 }
 
 .actionIconButton svg {
   flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+}
+
+.actionMenu {
+  position: relative;
+}
+
+.actionMenuPanel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  min-width: 168px;
+  display: grid;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid #d7dce3;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.16);
+}
+
+.actionMenuPanel .actionButton {
+  width: 100%;
+  min-height: 32px;
+  justify-content: flex-start;
+  padding: 7px 9px;
+  font-size: 12px;
 }
 
 .actionButtonSuccess {
@@ -278,23 +331,23 @@
 .metricsGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
 .metricCard {
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  padding: 18px;
+  padding: 13px 14px;
   display: flex;
   align-items: center;
   gap: 14px;
 }
 
 .metricIcon {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   border-radius: 8px;
   background: #f2e6d8;
   color: #111827;
@@ -306,7 +359,7 @@
 
 .metricCard strong {
   display: block;
-  font-size: 26px;
+  font-size: 22px;
   line-height: 1;
 }
 
@@ -314,7 +367,7 @@
   display: block;
   margin-top: 4px;
   color: #64748b;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .panel {
@@ -329,11 +382,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   background: #ffffff;
-  padding: 12px;
+  padding: 10px;
 }
 
 .toolbarGroup {
@@ -365,13 +418,66 @@
 .filterGrid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 14px;
-  padding: 18px;
+  gap: 10px;
+  padding: 12px;
   border-bottom: 1px solid #e5e7eb;
+  background: #fbfaf8;
+}
+
+.filterGrid input,
+.filterGrid select {
+  min-height: 36px;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
+.tableMetaBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.tableMetaBar h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+.tableMetaBar p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.tableStats {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.tableStats span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #475569;
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .tableWrap {
   overflow-x: auto;
+  overflow-y: visible;
 }
 
 .table {
@@ -381,51 +487,76 @@
 }
 
 .table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   text-align: center;
   background: #f8fafc;
   color: #475569;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  padding: 12px 16px;
+  padding: 9px 12px;
   border-bottom: 1px solid #e5e7eb;
 }
 
+.table th:first-child,
+.table td:first-child {
+  width: 46px;
+}
+
 .table td {
-  padding: 16px;
-  vertical-align: top;
+  padding: 10px 12px;
+  text-align: center;
+  vertical-align: middle;
   border-bottom: 1px solid #eef2f7;
   color: #111827;
-  font-size: 14px;
+  font-size: 13px;
+}
+
+.table tbody tr:nth-child(even) {
+  background: #fcfcfd;
+}
+
+.table tbody tr:hover {
+  background: #fbfaf8;
 }
 
 .table td strong {
   display: block;
   font-weight: 700;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .table td span {
   display: block;
   color: #64748b;
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.primaryCell strong {
+  color: #0f172a;
+}
+
+.dateCell,
+.moneyCell {
+  white-space: nowrap;
+}
+
+.dateCell {
+  min-width: 132px;
+  color: #334155 !important;
+  font-size: 12px !important;
+}
+
+.moneyCell {
+  min-width: 96px;
+  font-weight: 700;
 }
 
 .archivedRow {
   background: #f8fafc;
   opacity: 0.78;
-}
-
-.statusPill {
-  display: inline-flex !important;
-  width: fit-content;
-  margin: 0 0 6px;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: #f1f5f9;
-  color: #475569 !important;
-  font-size: 11px !important;
-  font-weight: 700;
 }
 
 .badge {
@@ -470,6 +601,7 @@
   max-width: 260px;
   color: #475569 !important;
   line-height: 1.5;
+  font-size: 12px !important;
 }
 
 .emptyState {
@@ -883,10 +1015,10 @@
 }
 
 .detailDrawer {
-  width: min(520px, 100%);
+  width: min(560px, 100%);
   height: 100%;
   overflow-y: auto;
-  background: #ffffff;
+  background: #f8fafc;
   box-shadow: -24px 0 80px rgba(15, 23, 42, 0.22);
 }
 
@@ -898,7 +1030,7 @@
   justify-content: space-between;
   gap: 16px;
   align-items: flex-start;
-  padding: 18px;
+  padding: 16px 18px;
   border-bottom: 1px solid #e5e7eb;
   background: #ffffff;
 }
@@ -918,17 +1050,34 @@
   font-size: 20px;
 }
 
+.drawerHeaderMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.drawerHeaderMeta small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .drawerSection {
-  padding: 18px;
-  border-bottom: 1px solid #eef2f7;
+  margin: 10px 12px;
+  padding: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
 }
 
 .drawerSection h3 {
-  margin: 0 0 12px;
-  font-size: 13px;
+  margin: 0 0 10px;
+  font-size: 11px;
   color: #475569;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
 }
 
 .drawerActions {
@@ -939,12 +1088,13 @@
 
 .detailGrid {
   display: grid;
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .detailGrid div {
   display: grid;
-  gap: 4px;
+  gap: 3px;
 }
 
 .detailGrid dt {
@@ -955,18 +1105,19 @@
 
 .detailGrid dd {
   color: #111827;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.45;
   word-break: break-word;
+  margin: 0;
 }
 
 .notesTextarea {
   width: 100%;
-  min-height: 130px;
+  min-height: 112px;
   border: 1px solid #d7dce3;
   border-radius: 6px;
   resize: vertical;
-  padding: 12px;
+  padding: 10px;
   font: inherit;
   margin-bottom: 10px;
 }
@@ -1101,7 +1252,8 @@
   }
 
   .screenToolbar,
-  .kanbanHeader {
+  .kanbanHeader,
+  .tableMetaBar {
     align-items: stretch;
     flex-direction: column;
   }
@@ -1141,6 +1293,7 @@
   .table td {
     border-bottom: 0;
     padding: 7px 0;
+    text-align: left;
   }
 
   .table td[data-label]::before {
@@ -1156,6 +1309,19 @@
 
   .archiveToggle {
     padding: 0 2px;
+  }
+
+  .tableStats {
+    justify-content: flex-start;
+  }
+
+  .actionMenuPanel {
+    left: 0;
+    right: auto;
+  }
+
+  .detailGrid {
+    grid-template-columns: 1fr;
   }
 
   .kanbanShell {

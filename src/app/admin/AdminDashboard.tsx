@@ -21,10 +21,12 @@ import {
   LogOut,
   Mail,
   MessageCircle,
+  MoreHorizontal,
   Pencil,
   Plus,
   RefreshCcw,
   Save,
+  SlidersHorizontal,
   Trash2,
   UserRound,
   X,
@@ -219,18 +221,26 @@ const getPrazoBadgeClass = (prazo: unknown) => {
   return `${styles.badge} ${styles.badgePlanning}`
 }
 
+const isRecentLead = (lead: BaseLead) => {
+  const createdAt = new Date(lead.created_at || 0).getTime()
+  if (Number.isNaN(createdAt)) return false
+  return createdAt >= Date.now() - 7 * 24 * 60 * 60 * 1000
+}
+
 function ActionLink({
   href,
   icon,
   label,
   variant = 'neutral',
   iconOnly = false,
+  onClick,
 }: {
   href: string
   icon: ReactNode
   label: string
   variant?: 'neutral' | 'success'
   iconOnly?: boolean
+  onClick?: () => void
 }) {
   if (!href) {
     return (
@@ -255,10 +265,37 @@ function ActionLink({
       target="_blank"
       title={label}
       rel="noopener noreferrer"
+      onClick={onClick}
     >
       {icon}
       {!iconOnly && label}
     </a>
+  )
+}
+
+function ActionMenu({
+  open,
+  onToggle,
+  children,
+}: {
+  open: boolean
+  onToggle: () => void
+  children: ReactNode
+}) {
+  return (
+    <div className={styles.actionMenu}>
+      <button
+        aria-expanded={open}
+        aria-label="Mais acoes"
+        className={styles.actionIconButton}
+        title="Mais acoes"
+        type="button"
+        onClick={onToggle}
+      >
+        <MoreHorizontal size={14} />
+      </button>
+      {open && <div className={styles.actionMenuPanel}>{children}</div>}
+    </div>
   )
 }
 
@@ -330,6 +367,8 @@ export default function AdminDashboard({
   const [loginLoading, setLoginLoading] = useState(false)
 
   const [activeTab, setActiveTab] = useState<Tab>('candidatos')
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [openActionMenuId, setOpenActionMenuId] = useState('')
   const [showArchived, setShowArchived] = useState(false)
   const [candidatos, setCandidatos] = useState<CandidatoLead[]>([])
   const [empresas, setEmpresas] = useState<EmpresaLead[]>([])
@@ -476,6 +515,18 @@ export default function AdminDashboard({
   )
   const allCurrentFilteredSelected =
     currentFilteredIds.length > 0 && currentFilteredIds.every(id => currentSelectedIds.includes(id))
+  const activeFiltersCount =
+    activeTab === 'empresas'
+      ? Object.values(empresaFilters).filter(Boolean).length
+      : Object.values(candidatoFilters).filter(Boolean).length
+  const currentFilteredLeads = activeTab === 'empresas' ? filteredEmpresas : filteredCandidatos
+  const currentRecentCount = currentFilteredLeads.filter(lead => !isArchived(lead) && isRecentLead(lead)).length
+  const currentArchivedCount = currentFilteredLeads.filter(isArchived).length
+  const currentPanelTitle = activeTab === 'empresas' ? 'Solicitacoes de empresas' : 'Curriculos recebidos'
+  const currentPanelDescription =
+    activeTab === 'empresas'
+      ? 'Leads comerciais recebidos pelo formulario de empresas.'
+      : 'Candidatos cadastrados pelo formulario do site.'
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -1303,7 +1354,10 @@ export default function AdminDashboard({
           <button
             className={activeTab === 'candidatos' ? styles.headerMenuActive : ''}
             type="button"
-            onClick={() => setActiveTab('candidatos')}
+            onClick={() => {
+              setOpenActionMenuId('')
+              setActiveTab('candidatos')
+            }}
           >
             <UserRound size={16} />
             Currículos
@@ -1311,7 +1365,10 @@ export default function AdminDashboard({
           <button
             className={activeTab === 'empresas' ? styles.headerMenuActive : ''}
             type="button"
-            onClick={() => setActiveTab('empresas')}
+            onClick={() => {
+              setOpenActionMenuId('')
+              setActiveTab('empresas')
+            }}
           >
             <Building2 size={16} />
             Empresas
@@ -1319,7 +1376,10 @@ export default function AdminDashboard({
           <button
             className={activeTab === 'kanban' ? styles.headerMenuActive : ''}
             type="button"
-            onClick={() => setActiveTab('kanban')}
+            onClick={() => {
+              setOpenActionMenuId('')
+              setActiveTab('kanban')
+            }}
           >
             <Columns3 size={16} />
             Kanban
@@ -1347,6 +1407,15 @@ export default function AdminDashboard({
       {activeTab !== 'kanban' && (
         <div className={styles.screenToolbar}>
           <div className={styles.toolbarGroup}>
+            <button
+              className={`${styles.secondaryButton} ${filtersOpen ? styles.secondaryButtonActive : ''}`}
+              type="button"
+              onClick={() => setFiltersOpen(open => !open)}
+            >
+              <SlidersHorizontal size={15} />
+              Filtros
+              {activeFiltersCount > 0 && <span className={styles.activeFiltersPill}>{activeFiltersCount}</span>}
+            </button>
             <label className={styles.archiveToggle}>
               <input
                 type="checkbox"
@@ -1387,6 +1456,19 @@ export default function AdminDashboard({
       <section className={styles.panel}>
         {activeTab === 'candidatos' && (
           <>
+            <div className={styles.tableMetaBar}>
+              <div>
+                <h2>{currentPanelTitle}</h2>
+                <p>{currentPanelDescription}</p>
+              </div>
+              <div className={styles.tableStats}>
+                <span>{filteredCandidatos.length} exibidos</span>
+                <span>{currentRecentCount} novos em 7 dias</span>
+                <span>{currentArchivedCount} arquivados</span>
+              </div>
+            </div>
+
+            {filtersOpen && (
             <div className={styles.filterGrid}>
               <label>
                 Nome
@@ -1454,6 +1536,7 @@ export default function AdminDashboard({
                 Limpar filtros
               </button>
             </div>
+            )}
 
             <div className={styles.tableWrap}>
               <table className={styles.table}>
@@ -1497,9 +1580,8 @@ export default function AdminDashboard({
                             onChange={() => toggleLeadSelection('candidatos', candidato.id)}
                           />
                         </td>
-                        <td data-label="Candidato">
+                        <td className={styles.primaryCell} data-label="Candidato">
                           <strong>{getText(candidato.nome)}</strong>
-                          {archived && <span className={styles.statusPill}>Arquivado</span>}
                           <span>{getText(candidato.email)}</span>
                           <span>{getText(candidato.whatsapp)}</span>
                         </td>
@@ -1509,8 +1591,8 @@ export default function AdminDashboard({
                           <span>{getText(candidato.cidade_estado)}</span>
                         </td>
                         <td data-label="Experiência">{getText(candidato.experiencia)}</td>
-                        <td data-label="Salário">{getText(candidato.pretensao_salarial)}</td>
-                        <td data-label="Recebido">{formatDate(candidato.created_at)}</td>
+                        <td className={styles.moneyCell} data-label="Salário">{getText(candidato.pretensao_salarial)}</td>
+                        <td className={styles.dateCell} data-label="Recebido">{formatDate(candidato.created_at)}</td>
                         <td data-label="Ações">
                           <div className={styles.rowActions}>
                             <ActionLink
@@ -1520,42 +1602,58 @@ export default function AdminDashboard({
                               variant="success"
                               iconOnly
                             />
-                            <ActionLink href={mailUrl} icon={<Mail size={15} />} label="E-mail" iconOnly />
                             <button
                               aria-label="Ver detalhes"
                               className={styles.actionIconButton}
                               title="Ver detalhes"
                               type="button"
-                              onClick={() => openLeadDetails('candidato', candidato)}
+                              onClick={() => {
+                                setOpenActionMenuId('')
+                                openLeadDetails('candidato', candidato)
+                              }}
                             >
                               <Info size={15} />
                             </button>
-                            <button
-                              aria-label={curriculoLoadingId === cvButtonId ? 'Abrindo currículo' : 'Abrir currículo'}
-                              className={styles.actionIconButton}
-                              disabled={!hasCv || curriculoLoadingId === cvButtonId}
-                              title={curriculoLoadingId === cvButtonId ? 'Abrindo currículo' : 'Abrir currículo'}
-                              type="button"
-                              onClick={() => openCurriculo(candidato)}
+                            <ActionMenu
+                              open={openActionMenuId === rowId}
+                              onToggle={() => setOpenActionMenuId(openActionMenuId === rowId ? '' : rowId)}
                             >
-                              <Eye size={15} />
-                            </button>
-                            <RowActionButton
-                              icon={archived ? <ArchiveRestore size={15} /> : <Archive size={15} />}
-                              label={archived ? 'Restaurar' : 'Arquivar'}
-                              disabled={mutatingLeadId === candidato.id}
-                              variant="warning"
-                              iconOnly
-                              onClick={() => updateLeadStatus('candidato', candidato, archived ? 'restore' : 'archive')}
-                            />
-                            <RowActionButton
-                              icon={<Trash2 size={15} />}
-                              label="Excluir"
-                              disabled={mutatingLeadId === candidato.id}
-                              variant="danger"
-                              iconOnly
-                              onClick={() => deleteLead('candidato', candidato)}
-                            />
+                              <ActionLink
+                                href={mailUrl}
+                                icon={<Mail size={15} />}
+                                label="E-mail"
+                                onClick={() => setOpenActionMenuId('')}
+                              />
+                              <RowActionButton
+                                icon={<Eye size={15} />}
+                                label={curriculoLoadingId === cvButtonId ? 'Abrindo curriculo' : 'Abrir curriculo'}
+                                disabled={!hasCv || curriculoLoadingId === cvButtonId}
+                                onClick={() => {
+                                  setOpenActionMenuId('')
+                                  openCurriculo(candidato)
+                                }}
+                              />
+                              <RowActionButton
+                                icon={archived ? <ArchiveRestore size={15} /> : <Archive size={15} />}
+                                label={archived ? 'Restaurar' : 'Arquivar'}
+                                disabled={mutatingLeadId === candidato.id}
+                                variant="warning"
+                                onClick={() => {
+                                  setOpenActionMenuId('')
+                                  updateLeadStatus('candidato', candidato, archived ? 'restore' : 'archive')
+                                }}
+                              />
+                              <RowActionButton
+                                icon={<Trash2 size={15} />}
+                                label="Excluir"
+                                disabled={mutatingLeadId === candidato.id}
+                                variant="danger"
+                                onClick={() => {
+                                  setOpenActionMenuId('')
+                                  deleteLead('candidato', candidato)
+                                }}
+                              />
+                            </ActionMenu>
                           </div>
                         </td>
                       </tr>
@@ -1573,6 +1671,19 @@ export default function AdminDashboard({
 
         {activeTab === 'empresas' && (
           <>
+            <div className={styles.tableMetaBar}>
+              <div>
+                <h2>{currentPanelTitle}</h2>
+                <p>{currentPanelDescription}</p>
+              </div>
+              <div className={styles.tableStats}>
+                <span>{filteredEmpresas.length} exibidas</span>
+                <span>{currentRecentCount} novas em 7 dias</span>
+                <span>{currentArchivedCount} arquivadas</span>
+              </div>
+            </div>
+
+            {filtersOpen && (
             <div className={styles.filterGrid}>
               <label>
                 Nome
@@ -1614,6 +1725,7 @@ export default function AdminDashboard({
                 Limpar filtros
               </button>
             </div>
+            )}
 
             <div className={styles.tableWrap}>
               <table className={styles.table}>
@@ -1644,9 +1756,10 @@ export default function AdminDashboard({
                       `Olá, ${getText(empresa.nome, '')}! Recebemos sua solicitação de contato pela Porto Talent.`
                     )
                     const mailUrl = getMailUrl(empresa.email, 'Porto Talent - solicitação de contato')
+                    const rowId = empresa.id || `${empresa.email}-${empresa.created_at}`
 
                     return (
-                      <tr key={empresa.id || `${empresa.email}-${empresa.created_at}`} className={archived ? styles.archivedRow : ''}>
+                      <tr key={rowId} className={archived ? styles.archivedRow : ''}>
                         <td data-label="Selecionar">
                           <input
                             aria-label={`Selecionar ${getText(empresa.nome, 'empresa')}`}
@@ -1655,9 +1768,8 @@ export default function AdminDashboard({
                             onChange={() => toggleLeadSelection('empresas', empresa.id)}
                           />
                         </td>
-                        <td data-label="Contato">
+                        <td className={styles.primaryCell} data-label="Contato">
                           <strong>{getText(empresa.nome)}</strong>
-                          {archived && <span className={styles.statusPill}>Arquivada</span>}
                           <span>{getText(empresa.email)}</span>
                           <span>{getText(empresa.whatsapp)}</span>
                         </td>
@@ -1669,7 +1781,7 @@ export default function AdminDashboard({
                           <span className={getPrazoBadgeClass(empresa.prazo)}>{getText(empresa.prazo)}</span>
                         </td>
                         <td className={styles.messageCell} data-label="Mensagem">{getText(empresa.mensagem)}</td>
-                        <td data-label="Recebido">{formatDate(empresa.created_at)}</td>
+                        <td className={styles.dateCell} data-label="Recebido">{formatDate(empresa.created_at)}</td>
                         <td data-label="Ações">
                           <div className={styles.rowActions}>
                             <ActionLink
@@ -1679,32 +1791,49 @@ export default function AdminDashboard({
                               variant="success"
                               iconOnly
                             />
-                            <ActionLink href={mailUrl} icon={<Mail size={15} />} label="E-mail" iconOnly />
                             <button
                               aria-label="Ver detalhes"
                               className={styles.actionIconButton}
                               title="Ver detalhes"
                               type="button"
-                              onClick={() => openLeadDetails('empresa', empresa)}
+                              onClick={() => {
+                                setOpenActionMenuId('')
+                                openLeadDetails('empresa', empresa)
+                              }}
                             >
                               <Info size={15} />
                             </button>
-                            <RowActionButton
-                              icon={archived ? <ArchiveRestore size={15} /> : <Archive size={15} />}
-                              label={archived ? 'Restaurar' : 'Arquivar'}
-                              disabled={mutatingLeadId === empresa.id}
-                              variant="warning"
-                              iconOnly
-                              onClick={() => updateLeadStatus('empresa', empresa, archived ? 'restore' : 'archive')}
-                            />
-                            <RowActionButton
-                              icon={<Trash2 size={15} />}
-                              label="Excluir"
-                              disabled={mutatingLeadId === empresa.id}
-                              variant="danger"
-                              iconOnly
-                              onClick={() => deleteLead('empresa', empresa)}
-                            />
+                            <ActionMenu
+                              open={openActionMenuId === rowId}
+                              onToggle={() => setOpenActionMenuId(openActionMenuId === rowId ? '' : rowId)}
+                            >
+                              <ActionLink
+                                href={mailUrl}
+                                icon={<Mail size={15} />}
+                                label="E-mail"
+                                onClick={() => setOpenActionMenuId('')}
+                              />
+                              <RowActionButton
+                                icon={archived ? <ArchiveRestore size={15} /> : <Archive size={15} />}
+                                label={archived ? 'Restaurar' : 'Arquivar'}
+                                disabled={mutatingLeadId === empresa.id}
+                                variant="warning"
+                                onClick={() => {
+                                  setOpenActionMenuId('')
+                                  updateLeadStatus('empresa', empresa, archived ? 'restore' : 'archive')
+                                }}
+                              />
+                              <RowActionButton
+                                icon={<Trash2 size={15} />}
+                                label="Excluir"
+                                disabled={mutatingLeadId === empresa.id}
+                                variant="danger"
+                                onClick={() => {
+                                  setOpenActionMenuId('')
+                                  deleteLead('empresa', empresa)
+                                }}
+                              />
+                            </ActionMenu>
                           </div>
                         </td>
                       </tr>
@@ -2056,6 +2185,9 @@ export default function AdminDashboard({
               <div>
                 <span>{selectedLead.type === 'candidato' ? 'Currículo' : 'Empresa'}</span>
                 <strong>{getText(selectedLead.lead.nome)}</strong>
+                <div className={styles.drawerHeaderMeta}>
+                  <small>{formatDate(selectedLead.lead.created_at)}</small>
+                </div>
               </div>
               <button className={styles.iconButton} type="button" onClick={() => setSelectedLead(null)} aria-label="Fechar detalhes">
                 <X size={18} />
@@ -2063,6 +2195,7 @@ export default function AdminDashboard({
             </header>
 
             <div className={styles.drawerSection}>
+              <h3>Contato rapido</h3>
               <div className={styles.drawerActions}>
                 <ActionLink
                   href={getWhatsAppUrl(selectedLead.lead.whatsapp, `Olá, ${getText(selectedLead.lead.nome, '')}! Aqui é da Porto Talent.`)}
@@ -2089,7 +2222,6 @@ export default function AdminDashboard({
               <dl className={styles.detailGrid}>
                 <div><dt>E-mail</dt><dd>{getText(selectedLead.lead.email)}</dd></div>
                 <div><dt>WhatsApp</dt><dd>{getText(selectedLead.lead.whatsapp)}</dd></div>
-                <div><dt>Status</dt><dd>{isArchived(selectedLead.lead) ? 'Arquivado' : getText(selectedLead.lead.status, 'Novo')}</dd></div>
                 <div><dt>Recebido</dt><dd>{formatDate(selectedLead.lead.created_at)}</dd></div>
                 {selectedLead.type === 'empresa' ? (
                   <>
