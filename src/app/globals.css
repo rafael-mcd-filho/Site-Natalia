@@ -201,6 +201,7 @@ button, a, [role="button"] { touch-action: manipulation; }
 .input-editorial input:not(:placeholder-shown) ~ label,
 .input-editorial textarea:focus ~ label,
 .input-editorial textarea:not(:placeholder-shown) ~ label,
+.input-editorial select ~ label,
 .input-editorial select:focus ~ label,
 .input-editorial.has-value label { top: -8px; font-size: 12px; color: var(--dourado); }
 .input-editorial .focus-line {

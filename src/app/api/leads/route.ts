@@ -54,6 +54,7 @@ const companySchema = z.object({
   email: z.email('Informe um e-mail válido.').max(180),
   whatsapp: phoneSchema,
   vaga: requiredText('Vaga'),
+  quantidade_colaboradores: requiredText('Quantidade de colaboradores'),
   prazo: requiredText('Prazo'),
   mensagem: z.string().trim().max(1200, 'Mensagem está muito longa.').optional().or(z.literal('')),
   website: z.string().trim().optional(),
@@ -196,6 +197,10 @@ export async function POST(request: NextRequest) {
       let cv_url: string | null = null
       let cv_nome: string | null = null
 
+      if (!(file instanceof File) || file.size === 0) {
+        return NextResponse.json({ message: 'Anexe seu currículo para continuar.' }, { status: 400 })
+      }
+
       if (file instanceof File && file.size > 0) {
         if (!allowedCvTypes.has(file.type)) {
           return NextResponse.json({ message: 'Use PDF, DOC ou DOCX.' }, { status: 400 })
@@ -280,6 +285,7 @@ export async function POST(request: NextRequest) {
       email: lead.email,
       whatsapp: lead.whatsapp,
       vaga: lead.vaga,
+      quantidade_colaboradores: lead.quantidade_colaboradores,
       prazo: lead.prazo,
       mensagem: lead.mensagem || null,
       lgpd: lead.lgpd,

@@ -39,12 +39,18 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = createSupabaseAdminClient()
+    const archived = request.nextUrl.searchParams.get('archived') === 'true'
 
-    const { data: boards, error: boardsError } = await supabase
+    let boardQuery = supabase
       .from('recruitment_boards')
       .select('*')
-      .is('archived_at', null)
       .order('created_at', { ascending: false })
+
+    boardQuery = archived
+      ? boardQuery.not('archived_at', 'is', null)
+      : boardQuery.is('archived_at', null)
+
+    const { data: boards, error: boardsError } = await boardQuery
 
     if (boardsError) {
       return NextResponse.json(
@@ -256,6 +262,24 @@ export async function PATCH(request: NextRequest) {
       const { data, error } = await supabase
         .from('recruitment_boards')
         .update({ archived_at: new Date().toISOString() })
+        .eq('id', boardId)
+        .select('*')
+        .single()
+
+      if (error) return NextResponse.json({ message: error.message }, { status: 500 })
+      return NextResponse.json({ board: data })
+    }
+
+    if (action === 'restore_board') {
+      const boardId = cleanText(body.boardId)
+
+      if (!boardId) {
+        return NextResponse.json({ message: 'Seleção não informada.' }, { status: 400 })
+      }
+
+      const { data, error } = await supabase
+        .from('recruitment_boards')
+        .update({ archived_at: null })
         .eq('id', boardId)
         .select('*')
         .single()

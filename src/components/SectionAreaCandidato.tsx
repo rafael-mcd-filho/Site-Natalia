@@ -32,10 +32,15 @@ export default function SectionAreaCandidato() {
     return `(${n.slice(0,2)}) ${n.slice(2,7)}-${n.slice(7)}`
   }
 
+  const clearArquivo = () => {
+    setArquivo(null)
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
   const handleFile = (f: File) => {
     const allowed = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-    if (!allowed.includes(f.type)) { setErrorMessage('Use PDF, DOC ou DOCX.'); setStatus('error'); setFieldErrors(errors => ({ ...errors, curriculo: 'Use PDF, DOC ou DOCX.' })); return }
-    if (f.size > 5 * 1024 * 1024) { setErrorMessage('Arquivo maior que 5MB.'); setStatus('error'); setFieldErrors(errors => ({ ...errors, curriculo: 'Arquivo maior que 5MB.' })); return }
+    if (!allowed.includes(f.type)) { clearArquivo(); setErrorMessage('Use PDF, DOC ou DOCX.'); setStatus('error'); setFieldErrors(errors => ({ ...errors, curriculo: 'Use PDF, DOC ou DOCX.' })); return }
+    if (f.size > 5 * 1024 * 1024) { clearArquivo(); setErrorMessage('Arquivo maior que 5MB.'); setStatus('error'); setFieldErrors(errors => ({ ...errors, curriculo: 'Arquivo maior que 5MB.' })); return }
     setErrorMessage('')
     setStatus('idle')
     setFieldErrors(errors => ({ ...errors, curriculo: '' }))
@@ -52,6 +57,7 @@ export default function SectionAreaCandidato() {
     if (!form.cargo_atual.trim()) errors.cargo_atual = 'Informe seu cargo.'
     if (!form.area_atuacao.trim()) errors.area_atuacao = 'Selecione sua área.'
     if (!form.experiencia.trim()) errors.experiencia = 'Selecione sua experiência.'
+    if (!arquivo) errors.curriculo = 'Anexe seu currículo para continuar.'
     if (!form.lgpd) {
       errors.lgpd = 'Aceite a Política de Privacidade para continuar.'
     }
@@ -264,6 +270,7 @@ export default function SectionAreaCandidato() {
                       role="button"
                       tabIndex={0}
                       aria-label="Selecionar currículo"
+                      aria-describedby={fieldErrors.curriculo ? 'curriculo-error' : undefined}
                       onKeyDown={e => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault()
@@ -280,7 +287,7 @@ export default function SectionAreaCandidato() {
                             <FileCheck size={24} strokeWidth={1.5} aria-hidden="true" style={{ color: '#22c55e' }} />
                           </div>
                           <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, color: 'var(--preto)' }}>{arquivo.name}</p>
-                          <button type="button" onClick={e => { e.stopPropagation(); setArquivo(null) }}
+                          <button type="button" onClick={e => { e.stopPropagation(); clearArquivo() }}
                             style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--cinza-medio)', marginTop: 4, cursor: 'pointer' }}>
                             Trocar arquivo
                           </button>
@@ -297,7 +304,7 @@ export default function SectionAreaCandidato() {
                       <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" style={{ display: 'none' }}
                         onChange={e => { if (e.target.files?.[0]) handleFile(e.target.files[0]) }} />
                     </div>
-                    {fieldErrors.curriculo && <span className="field-error">{fieldErrors.curriculo}</span>}
+                    {fieldErrors.curriculo && <span id="curriculo-error" className="field-error">{fieldErrors.curriculo}</span>}
                   </div>
 
                   <label className="checkbox-custom" style={{ marginBottom: 24 }}>

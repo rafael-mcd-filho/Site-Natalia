@@ -7,11 +7,18 @@ import { trackEvent } from '@/lib/tracking'
 import { getLeadTracking } from '@/lib/lead-tracking'
 
 const prazoOpcoes = ['Urgente', 'Em até 30 dias', 'Em até 60 dias', 'Ainda planejando']
+const quantidadeColaboradoresOpcoes = [
+  '1 colaborador',
+  '2 a 3 colaboradores',
+  '4 a 10 colaboradores',
+  'Mais de 10 colaboradores',
+  'Ainda não sei',
+]
 
 export default function SectionCTAEmpresa() {
   const [form, setForm] = useState({
     nome: '', empresa: '', email: '', whatsapp: '',
-    vaga: '', prazo: '', mensagem: '', website: '', lgpd: false,
+    vaga: '', quantidade_colaboradores: '', prazo: '', mensagem: '', website: '', lgpd: false,
   })
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
@@ -35,6 +42,7 @@ export default function SectionCTAEmpresa() {
     if (!form.email.trim()) errors.email = 'Informe seu e-mail.'
     if (form.whatsapp.replace(/\D/g, '').length < 10) errors.whatsapp = 'Informe um WhatsApp válido.'
     if (!form.vaga.trim()) errors.vaga = 'Informe a vaga.'
+    if (!form.quantidade_colaboradores.trim()) errors.quantidade_colaboradores = 'Informe a quantidade de colaboradores.'
     if (!form.prazo.trim()) errors.prazo = 'Selecione o prazo.'
     if (!form.lgpd) {
       errors.lgpd = 'Aceite a Política de Privacidade para continuar.'
@@ -198,10 +206,31 @@ export default function SectionCTAEmpresa() {
                   {fieldErrors.vaga && <span className="field-error">{fieldErrors.vaga}</span>}
                 </div>
 
+                <div className={`input-editorial ${form.quantidade_colaboradores ? 'has-value' : ''}`}>
+                  <select
+                    required
+                    value={form.quantidade_colaboradores}
+                    aria-label="Quantidade de colaboradores"
+                    aria-invalid={Boolean(fieldErrors.quantidade_colaboradores)}
+                    onChange={e => {
+                      set('quantidade_colaboradores', e.target.value)
+                      setFieldErrors(errors => ({ ...errors, quantidade_colaboradores: '' }))
+                    }}
+                  >
+                    <option value="" disabled>Quantos colaboradores deseja contratar?</option>
+                    {quantidadeColaboradoresOpcoes.map(opcao => <option key={opcao} value={opcao}>{opcao}</option>)}
+                  </select>
+                  <div className="focus-line" />
+                  {fieldErrors.quantidade_colaboradores && (
+                    <span className="field-error">{fieldErrors.quantidade_colaboradores}</span>
+                  )}
+                </div>
+
                 <div className={`input-editorial ${form.prazo ? 'has-value' : ''}`}>
                   <select
                     required
                     value={form.prazo}
+                    aria-label="Prazo de contratação"
                     aria-invalid={Boolean(fieldErrors.prazo)}
                     onChange={e => {
                       set('prazo', e.target.value)
@@ -211,7 +240,6 @@ export default function SectionCTAEmpresa() {
                     <option value="" disabled>Quando pretende contratar?</option>
                     {prazoOpcoes.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
-                  <label>Quando pretende contratar?</label>
                   <div className="focus-line" />
                   {fieldErrors.prazo && <span className="field-error">{fieldErrors.prazo}</span>}
                 </div>

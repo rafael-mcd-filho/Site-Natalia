@@ -9,7 +9,9 @@ import {
   ArrowLeft,
   ArrowRight,
   Building2,
+  Check,
   CheckCircle2,
+  ChevronDown,
   Columns3,
   Download,
   ExternalLink,
@@ -64,6 +66,7 @@ type BaseLead = {
 type EmpresaLead = BaseLead & {
   empresa?: string | null
   vaga?: string | null
+  quantidade_colaboradores?: string | null
   prazo?: string | null
   mensagem?: string | null
 }
@@ -101,6 +104,7 @@ type KanbanBoard = {
   id: string
   title: string
   created_at?: string
+  archived_at?: string | null
   stages: KanbanStage[]
 }
 
@@ -227,6 +231,58 @@ const isRecentLead = (lead: BaseLead) => {
   return createdAt >= Date.now() - 7 * 24 * 60 * 60 * 1000
 }
 
+function CustomSelect({
+  value,
+  onChange,
+  options,
+  placeholder,
+}: {
+  value: string
+  onChange: (value: string) => void
+  options: { label: string; value: string }[]
+  placeholder?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const selected = options.find(o => o.value === value)
+
+  return (
+    <div className={styles.customSelect}>
+      <button
+        type="button"
+        className={styles.customSelectTrigger}
+        onClick={() => setOpen(prev => !prev)}
+        onBlur={() => window.setTimeout(() => setOpen(false), 140)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span>{selected?.label ?? placeholder ?? '—'}</span>
+        <ChevronDown size={15} className={open ? styles.customSelectChevronOpen : undefined} />
+      </button>
+      {open && (
+        <div className={styles.customSelectMenu} role="listbox">
+          {options.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              role="option"
+              aria-selected={value === opt.value}
+              className={`${styles.customSelectOption} ${value === opt.value ? styles.customSelectOptionActive : ''}`}
+              onMouseDown={event => event.preventDefault()}
+              onClick={() => {
+                onChange(opt.value)
+                setOpen(false)
+              }}
+            >
+              {value === opt.value && <Check size={13} />}
+              <span>{opt.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ActionLink({
   href,
   icon,
@@ -282,19 +338,43 @@ function ActionMenu({
   onToggle: () => void
   children: ReactNode
 }) {
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const [menuPos, setMenuPos] = useState<{ top?: number; bottom?: number; right: number }>({ right: 0 })
+
+  const handleToggle = () => {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      if (spaceBelow < 220) {
+        setMenuPos({ bottom: window.innerHeight - rect.top + 8, right: window.innerWidth - rect.right })
+      } else {
+        setMenuPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right })
+      }
+    }
+    onToggle()
+  }
+
   return (
     <div className={styles.actionMenu}>
       <button
+        ref={buttonRef}
         aria-expanded={open}
         aria-label="Mais acoes"
         className={styles.actionIconButton}
         title="Mais acoes"
         type="button"
-        onClick={onToggle}
+        onClick={handleToggle}
       >
         <MoreHorizontal size={14} />
       </button>
-      {open && <div className={styles.actionMenuPanel}>{children}</div>}
+      {open && (
+        <div
+          className={styles.actionMenuPanel}
+          style={{ position: 'fixed', top: menuPos.top, bottom: menuPos.bottom, right: menuPos.right }}
+        >
+          {children}
+        </div>
+      )}
     </div>
   )
 }
@@ -370,9 +450,13 @@ export default function AdminDashboard({
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [openActionMenuId, setOpenActionMenuId] = useState('')
   const [showArchived, setShowArchived] = useState(false)
+  const [showArchivedBoards, setShowArchivedBoards] = useState(false)
   const [candidatos, setCandidatos] = useState<CandidatoLead[]>([])
   const [empresas, setEmpresas] = useState<EmpresaLead[]>([])
   const [boards, setBoards] = useState<KanbanBoard[]>([])
+  const [activeBoardsCount, setActiveBoardsCount] = useState(0)
+  const [archivedBoardsCount, setArchivedBoardsCount] = useState(0)
+  const [boardSearch, setBoardSearch] = useState('')
   const [activeBoardId, setActiveBoardId] = useState('')
   const [loading, setLoading] = useState(false)
   const [kanbanLoading, setKanbanLoading] = useState(false)
@@ -383,6 +467,7 @@ export default function AdminDashboard({
   const [curriculoViewer, setCurriculoViewer] = useState<CurriculoViewer | null>(null)
   const [mutatingLeadId, setMutatingLeadId] = useState('')
   const [draggedCardId, setDraggedCardId] = useState('')
+  const [dragOverStageId, setDragOverStageId] = useState('')
   const [newBoardTitle, setNewBoardTitle] = useState('')
   const [newStageTitle, setNewStageTitle] = useState('')
   const [selectedCandidateId, setSelectedCandidateId] = useState('')
@@ -417,11 +502,11 @@ export default function AdminDashboard({
   })
 
   const visibleCandidatos = useMemo(
-    () => candidatos.filter(candidato => showArchived || !isArchived(candidato)),
+    () => candidatos.filter(candidato => showArchived ? isArchived(candidato) : !isArchived(candidato)),
     [candidatos, showArchived]
   )
   const visibleEmpresas = useMemo(
-    () => empresas.filter(empresa => showArchived || !isArchived(empresa)),
+    () => empresas.filter(empresa => showArchived ? isArchived(empresa) : !isArchived(empresa)),
     [empresas, showArchived]
   )
 
@@ -477,6 +562,13 @@ export default function AdminDashboard({
         ? selectedStageId
         : activeBoard?.stages[0]?.id || '',
     [activeBoard, selectedStageId]
+  )
+  const filteredBoards = useMemo(
+    () =>
+      boardSearch.trim()
+        ? boards.filter(b => normalize(b.title).includes(normalize(boardSearch)))
+        : boards,
+    [boards, boardSearch]
   )
   const kanbanCandidates = useMemo(
     () =>
@@ -562,35 +654,49 @@ export default function AdminDashboard({
     }
   }, [])
 
-  const loadKanban = useCallback(async () => {
-    setKanbanLoading(true)
-    setKanbanError('')
+  const loadKanban = useCallback(async (archived = false, countOnly = false) => {
+    if (!countOnly) {
+      setKanbanLoading(true)
+      setKanbanError('')
+    }
 
     try {
-      const response = await fetch('/api/admin/kanban', { cache: 'no-store' })
+      const url = archived ? '/api/admin/kanban?archived=true' : '/api/admin/kanban'
+      const response = await fetch(url, { cache: 'no-store' })
       const data = (await response.json()) as KanbanResponse
 
       if (response.status === 401) {
         setAuthenticated(false)
-        setBoards([])
+        if (!countOnly) setBoards([])
         return
       }
 
       if (!response.ok) {
-        throw new Error(data.message || 'Não foi possível carregar o kanban.')
+        if (!countOnly) throw new Error(data.message || 'Não foi possível carregar o kanban.')
+        return
       }
 
-      setBoards(data.boards || [])
+      const count = (data.boards || []).length
+      if (archived) {
+        setArchivedBoardsCount(count)
+      } else {
+        setActiveBoardsCount(count)
+      }
+      if (!countOnly) setBoards(data.boards || [])
     } catch (error) {
-      setKanbanError(error instanceof Error ? error.message : 'Erro inesperado ao carregar o kanban.')
+      if (!countOnly) setKanbanError(error instanceof Error ? error.message : 'Erro inesperado ao carregar o kanban.')
     } finally {
-      setKanbanLoading(false)
+      if (!countOnly) setKanbanLoading(false)
     }
   }, [])
 
   const refreshAll = useCallback(async () => {
-    await Promise.all([loadData(), loadKanban()])
-  }, [loadData, loadKanban])
+    await Promise.all([
+      loadData(),
+      loadKanban(showArchivedBoards),
+      loadKanban(!showArchivedBoards, true),
+    ])
+  }, [loadData, loadKanban, showArchivedBoards])
 
   useEffect(() => {
     if (!authenticated) return
@@ -853,7 +959,7 @@ export default function AdminDashboard({
     const isEmpresa = activeTab === 'empresas'
     const rows = isEmpresa ? filteredEmpresas : filteredCandidatos
     const headers = isEmpresa
-      ? ['Nome', 'Email', 'WhatsApp', 'Empresa', 'Vaga', 'Prazo', 'Mensagem', 'Status', 'Recebido', 'UTM source', 'UTM campaign']
+      ? ['Nome', 'Email', 'WhatsApp', 'Empresa', 'Vaga', 'Quantidade de colaboradores', 'Prazo', 'Mensagem', 'Status', 'Recebido', 'UTM source', 'UTM campaign']
       : ['Nome', 'Email', 'WhatsApp', 'Cidade', 'Cargo', 'Área', 'Experiência', 'Salário', 'LinkedIn', 'Status', 'Recebido', 'UTM source', 'UTM campaign']
     const bodyRows = rows.map(item =>
       isEmpresa
@@ -863,6 +969,7 @@ export default function AdminDashboard({
             item.whatsapp,
             (item as EmpresaLead).empresa,
             (item as EmpresaLead).vaga,
+            (item as EmpresaLead).quantidade_colaboradores,
             (item as EmpresaLead).prazo,
             (item as EmpresaLead).mensagem,
             item.status,
@@ -897,6 +1004,35 @@ export default function AdminDashboard({
     link.remove()
     URL.revokeObjectURL(url)
     showToast('CSV exportado.')
+  }
+
+  const exportKanbanCsv = () => {
+    if (!activeBoard) return
+    const headers = ['Etapa', 'Candidato', 'Cargo', 'WhatsApp', 'E-mail', 'Cidade', 'Experiência', 'Salário', 'Observações']
+    const rows = activeBoard.stages.flatMap(stage =>
+      stage.cards.map(card => [
+        stage.title,
+        getText(card.candidato?.nome),
+        getText(card.candidato?.cargo_atual),
+        getText(card.candidato?.whatsapp),
+        getText(card.candidato?.email),
+        getText(card.candidato?.cidade_estado),
+        getText(card.candidato?.experiencia),
+        getText(card.candidato?.pretensao_salarial),
+        getText(card.notes),
+      ])
+    )
+    const csv = [headers, ...rows].map(row => row.map(csvCell).join(';')).join('\n')
+    const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `kanban-${activeBoard.title.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+    showToast('Kanban exportado.')
   }
 
   const bulkUpdateLeadStatus = (type: LeadType, action: LeadAction) => {
@@ -1163,24 +1299,64 @@ export default function AdminDashboard({
   }
 
   const moveCard = async (cardId: string, stageId: string) => {
-    if (!activeBoard || !cardId || !stageId) return
+    if (!activeBoard || !cardId || !stageId) {
+      setDraggedCardId('')
+      setDragOverStageId('')
+      return
+    }
+
+    const sourceStage = activeBoard.stages.find(stage =>
+      stage.cards.some(card => card.id === cardId)
+    )
+    const movingCard = sourceStage?.cards.find(card => card.id === cardId)
+
+    setDraggedCardId('')
+    setDragOverStageId('')
+
+    if (!sourceStage || !movingCard || sourceStage.id === stageId) {
+      return
+    }
+
+    const targetBoardId = activeBoard.id
+    const previousBoards = boards
+
+    setBoards(prev =>
+      prev.map(board => {
+        if (board.id !== targetBoardId) return board
+        return {
+          ...board,
+          stages: board.stages.map(stage => {
+            if (stage.id === sourceStage.id) {
+              return { ...stage, cards: stage.cards.filter(card => card.id !== cardId) }
+            }
+            if (stage.id === stageId) {
+              return {
+                ...stage,
+                cards: [...stage.cards, { ...movingCard, stage_id: stageId }],
+              }
+            }
+            return stage
+          }),
+        }
+      })
+    )
 
     setKanbanError('')
-    setKanbanLoading(true)
 
     try {
       await kanbanRequest('PATCH', {
         action: 'move_card',
-        boardId: activeBoard.id,
+        boardId: targetBoardId,
         cardId,
         stageId,
       })
       await loadKanban()
     } catch (error) {
-      setKanbanError(error instanceof Error ? error.message : 'Não foi possível mover o candidato.')
-    } finally {
-      setKanbanLoading(false)
-      setDraggedCardId('')
+      setBoards(previousBoards)
+      const message =
+        error instanceof Error ? error.message : 'Não foi possível mover o candidato.'
+      setKanbanError(message)
+      showToast(message, 'error')
     }
   }
 
@@ -1202,6 +1378,33 @@ export default function AdminDashboard({
           showToast('Seleção arquivada.')
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Não foi possível arquivar a seleção.'
+          setKanbanError(message)
+          showToast(message, 'error')
+        } finally {
+          setKanbanLoading(false)
+        }
+      },
+    })
+  }
+
+  const restoreBoard = async (board: KanbanBoard) => {
+    askConfirmation({
+      title: 'Restaurar seleção',
+      message: `Você está prestes a restaurar "${board.title}".`,
+      warning: 'A seleção voltará para a tela principal do Kanban.',
+      confirmLabel: 'Restaurar seleção',
+      tone: 'neutral',
+      onConfirm: async () => {
+        setKanbanError('')
+        setKanbanLoading(true)
+
+        try {
+          await kanbanRequest('PATCH', { action: 'restore_board', boardId: board.id })
+          if (activeBoardId === board.id) setActiveBoardId('')
+          await loadKanban(true)
+          showToast('Seleção restaurada.')
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Não foi possível restaurar a seleção.'
           setKanbanError(message)
           showToast(message, 'error')
         } finally {
@@ -1397,11 +1600,29 @@ export default function AdminDashboard({
       {loadError && <div className={styles.errorBox}>{loadError}</div>}
       {kanbanError && <div className={styles.errorBox}>{kanbanError}</div>}
 
-      <section className={styles.metricsGrid}>
-        <MetricCard label="currículos ativos" value={candidatos.filter(c => !isArchived(c)).length} icon={<UserRound size={18} />} />
-        <MetricCard label="empresas ativas" value={empresas.filter(e => !isArchived(e)).length} icon={<Building2 size={18} />} />
-        <MetricCard label="arquivados" value={[...candidatos, ...empresas].filter(isArchived).length} icon={<Archive size={18} />} />
-        <MetricCard label="seleções kanban" value={boards.length} icon={<Columns3 size={18} />} />
+      <section className={`${styles.metricsGrid} ${activeTab === 'kanban' ? styles.metricsGridTwo : ''}`}>
+        {activeTab === 'candidatos' && (
+          <>
+            <MetricCard label="currículos ativos" value={candidatos.filter(c => !isArchived(c)).length} icon={<UserRound size={18} />} />
+            <MetricCard label="novos esta semana" value={candidatos.filter(c => !isArchived(c) && isRecentLead(c)).length} icon={<UserRound size={18} />} />
+            <MetricCard label="arquivados" value={candidatos.filter(isArchived).length} icon={<Archive size={18} />} />
+            <MetricCard label="total recebido" value={candidatos.length} icon={<UserRound size={18} />} />
+          </>
+        )}
+        {activeTab === 'empresas' && (
+          <>
+            <MetricCard label="empresas ativas" value={empresas.filter(e => !isArchived(e)).length} icon={<Building2 size={18} />} />
+            <MetricCard label="novas esta semana" value={empresas.filter(e => !isArchived(e) && isRecentLead(e)).length} icon={<Building2 size={18} />} />
+            <MetricCard label="arquivadas" value={empresas.filter(isArchived).length} icon={<Archive size={18} />} />
+            <MetricCard label="total recebido" value={empresas.length} icon={<Building2 size={18} />} />
+          </>
+        )}
+        {activeTab === 'kanban' && (
+          <>
+            <MetricCard label="seleções ativas" value={activeBoardsCount} icon={<Columns3 size={18} />} />
+            <MetricCard label="seleções arquivadas" value={archivedBoardsCount} icon={<Archive size={18} />} />
+          </>
+        )}
       </section>
 
       {activeTab !== 'kanban' && (
@@ -1433,10 +1654,12 @@ export default function AdminDashboard({
             </button>
             {currentSelectedIds.length > 0 && (
               <>
-                <button className={styles.secondaryButton} type="button" onClick={() => bulkUpdateLeadStatus(currentLeadType, 'archive')}>
-                  <Archive size={16} />
-                  Arquivar
-                </button>
+                {!showArchived && (
+                  <button className={styles.secondaryButton} type="button" onClick={() => bulkUpdateLeadStatus(currentLeadType, 'archive')}>
+                    <Archive size={16} />
+                    Arquivar
+                  </button>
+                )}
                 {showArchived && (
                   <button className={styles.secondaryButton} type="button" onClick={() => bulkUpdateLeadStatus(currentLeadType, 'restore')}>
                     <ArchiveRestore size={16} />
@@ -1492,35 +1715,21 @@ export default function AdminDashboard({
               </label>
               <label>
                 Área
-                <select
+                <CustomSelect
                   value={candidatoFilters.area}
-                  onChange={event =>
-                    setCandidatoFilters(filters => ({ ...filters, area: event.target.value }))
-                  }
-                >
-                  <option value="">Todas</option>
-                  {areaOptions.map(area => (
-                    <option key={area} value={area}>
-                      {area}
-                    </option>
-                  ))}
-                </select>
+                  onChange={value => setCandidatoFilters(filters => ({ ...filters, area: value }))}
+                  options={[{ value: '', label: 'Todas' }, ...areaOptions.map(a => ({ value: a, label: a }))]}
+                  placeholder="Todas"
+                />
               </label>
               <label>
                 Experiência
-                <select
+                <CustomSelect
                   value={candidatoFilters.experiencia}
-                  onChange={event =>
-                    setCandidatoFilters(filters => ({ ...filters, experiencia: event.target.value }))
-                  }
-                >
-                  <option value="">Todas</option>
-                  {experienciaOptions.map(experiencia => (
-                    <option key={experiencia} value={experiencia}>
-                      {experiencia}
-                    </option>
-                  ))}
-                </select>
+                  onChange={value => setCandidatoFilters(filters => ({ ...filters, experiencia: value }))}
+                  options={[{ value: '', label: 'Todas' }, ...experienciaOptions.map(e => ({ value: e, label: e }))]}
+                  placeholder="Todas"
+                />
               </label>
               <label>
                 Salário
@@ -1742,6 +1951,7 @@ export default function AdminDashboard({
                     <th>Contato</th>
                     <th>Empresa</th>
                     <th>Vaga</th>
+                    <th>Qtd.</th>
                     <th>Prazo</th>
                     <th>Mensagem</th>
                     <th>Recebido</th>
@@ -1777,6 +1987,7 @@ export default function AdminDashboard({
                           <strong>{getText(empresa.empresa)}</strong>
                         </td>
                         <td data-label="Vaga">{getText(empresa.vaga)}</td>
+                        <td data-label="Qtd.">{getText(empresa.quantidade_colaboradores)}</td>
                         <td data-label="Prazo">
                           <span className={getPrazoBadgeClass(empresa.prazo)}>{getText(empresa.prazo)}</span>
                         </td>
@@ -1867,8 +2078,16 @@ export default function AdminDashboard({
                 </button>
               </form>
 
+              <div className={styles.boardSearch}>
+                <input
+                  value={boardSearch}
+                  onChange={event => setBoardSearch(event.target.value)}
+                  placeholder="Buscar seleção..."
+                />
+              </div>
+
               <div className={styles.boardList}>
-                {boards.map(board => (
+                {filteredBoards.map(board => (
                   <button
                     key={board.id}
                     className={activeBoard?.id === board.id ? styles.boardButtonActive : styles.boardButton}
@@ -1883,7 +2102,27 @@ export default function AdminDashboard({
                     <span>{board.title}</span>
                   </button>
                 ))}
+                {filteredBoards.length === 0 && (
+                  <p className={styles.boardListEmpty}>
+                    {boardSearch ? 'Nenhuma seleção encontrada.' : showArchivedBoards ? 'Nenhuma seleção arquivada.' : 'Nenhuma seleção ativa.'}
+                  </p>
+                )}
               </div>
+
+              <div className={styles.boardListDivider} />
+              <button
+                type="button"
+                className={`${styles.boardArchivedToggle} ${showArchivedBoards ? styles.boardArchivedToggleActive : ''}`}
+                onClick={() => {
+                  const next = !showArchivedBoards
+                  setShowArchivedBoards(next)
+                  setActiveBoardId('')
+                  void loadKanban(next)
+                }}
+              >
+                <Archive size={14} />
+                {showArchivedBoards ? 'Ver seleções ativas' : 'Ver seleções arquivadas'}
+              </button>
             </aside>
 
             <div className={styles.kanbanMain}>
@@ -1924,10 +2163,21 @@ export default function AdminDashboard({
                       )}
                     </div>
                     <div className={styles.headerActions}>
-                      <button className={`${styles.secondaryButton} ${styles.actionButtonWarning}`} type="button" onClick={() => archiveBoard(activeBoard)}>
-                        <Archive size={15} />
-                        Arquivar seleção
+                      <button className={styles.secondaryButton} type="button" onClick={exportKanbanCsv} disabled={activeBoard.stages.every(s => s.cards.length === 0)}>
+                        <FileDown size={15} />
+                        Exportar Excel
                       </button>
+                      {activeBoard.archived_at ? (
+                        <button className={styles.secondaryButton} type="button" onClick={() => restoreBoard(activeBoard)}>
+                          <ArchiveRestore size={15} />
+                          Restaurar seleção
+                        </button>
+                      ) : (
+                        <button className={`${styles.secondaryButton} ${styles.actionButtonWarning}`} type="button" onClick={() => archiveBoard(activeBoard)}>
+                          <Archive size={15} />
+                          Arquivar seleção
+                        </button>
+                      )}
                       <button className={`${styles.secondaryButton} ${styles.actionButtonDanger}`} type="button" onClick={() => deleteBoard(activeBoard)}>
                         <Trash2 size={15} />
                         Excluir seleção
@@ -1935,7 +2185,7 @@ export default function AdminDashboard({
                     </div>
                   </div>
 
-                  <div className={styles.kanbanForms}>
+                  {!activeBoard.archived_at && <div className={styles.kanbanForms}>
                     <form className={styles.inlineForm} onSubmit={createStage}>
                       <input
                         value={newStageTitle}
@@ -1992,13 +2242,11 @@ export default function AdminDashboard({
                           </span>
                         )}
                       </div>
-                      <select value={effectiveSelectedStageId} onChange={event => setSelectedStageId(event.target.value)}>
-                        {activeBoard.stages.map(stage => (
-                          <option key={stage.id} value={stage.id}>
-                            {stage.title}
-                          </option>
-                        ))}
-                      </select>
+                      <CustomSelect
+                        value={effectiveSelectedStageId}
+                        onChange={value => setSelectedStageId(value)}
+                        options={activeBoard.stages.map(stage => ({ value: stage.id, label: stage.title }))}
+                      />
                       <button
                         className={styles.secondaryButton}
                         type="submit"
@@ -2008,16 +2256,29 @@ export default function AdminDashboard({
                         Adicionar
                       </button>
                     </form>
-                  </div>
+                  </div>}
 
                   <div className={styles.kanbanColumns}>
                     {activeBoard.stages.map((stage, stageIndex) => (
                       <section
                         key={stage.id}
-                        className={styles.kanbanColumn}
-                        onDragOver={event => event.preventDefault()}
-                        onDrop={() => {
+                        className={`${styles.kanbanColumn} ${dragOverStageId === stage.id ? styles.kanbanColumnDropTarget : ''}`}
+                        onDragOver={event => {
+                          if (!draggedCardId) return
+                          event.preventDefault()
+                          if (dragOverStageId !== stage.id) {
+                            setDragOverStageId(stage.id)
+                          }
+                        }}
+                        onDragLeave={event => {
+                          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                            setDragOverStageId(current => (current === stage.id ? '' : current))
+                          }
+                        }}
+                        onDrop={event => {
+                          event.preventDefault()
                           if (draggedCardId) void moveCard(draggedCardId, stage.id)
+                          setDragOverStageId('')
                         }}
                       >
                         <header className={styles.kanbanColumnHeader}>
@@ -2091,10 +2352,19 @@ export default function AdminDashboard({
                             return (
                               <article
                                 key={card.id}
-                                className={styles.kanbanCard}
+                                className={`${styles.kanbanCard} ${draggedCardId === card.id ? styles.kanbanCardDragging : ''}`}
                                 draggable
-                                onDragStart={() => setDraggedCardId(card.id)}
-                                onDragEnd={() => setDraggedCardId('')}
+                                onDragStart={event => {
+                                  setDraggedCardId(card.id)
+                                  event.dataTransfer.effectAllowed = 'move'
+                                  try {
+                                    event.dataTransfer.setData('text/plain', card.id)
+                                  } catch {}
+                                }}
+                                onDragEnd={() => {
+                                  setDraggedCardId('')
+                                  setDragOverStageId('')
+                                }}
                               >
                                 <div className={styles.kanbanCardHandle}>
                                   <GripVertical size={15} />
@@ -2227,6 +2497,7 @@ export default function AdminDashboard({
                   <>
                     <div><dt>Empresa</dt><dd>{getText((selectedLead.lead as EmpresaLead).empresa)}</dd></div>
                     <div><dt>Vaga</dt><dd>{getText((selectedLead.lead as EmpresaLead).vaga)}</dd></div>
+                    <div><dt>Colaboradores</dt><dd>{getText((selectedLead.lead as EmpresaLead).quantidade_colaboradores)}</dd></div>
                     <div><dt>Prazo</dt><dd>{getText((selectedLead.lead as EmpresaLead).prazo)}</dd></div>
                     <div><dt>Mensagem</dt><dd>{getText((selectedLead.lead as EmpresaLead).mensagem)}</dd></div>
                   </>

@@ -22,7 +22,7 @@ export default function PoliticaDePrivacidadePage() {
       <article className={styles.main}>
         <span className={styles.eyebrow}>Privacidade</span>
         <h1 className={styles.title}>Política de Privacidade</h1>
-        <p className={styles.updated}>Última atualização: 5 de maio de 2026.</p>
+        <p className={styles.updated}>Última atualização: 21 de maio de 2026.</p>
 
         <div className={styles.content}>
           <section className={styles.note}>
@@ -52,8 +52,8 @@ export default function PoliticaDePrivacidadePage() {
             <p>Podemos coletar dados fornecidos diretamente por você nos formulários do site:</p>
             <ul>
               <li>
-                Empresas: nome, empresa, e-mail, WhatsApp, vaga desejada, prazo de contratação e mensagem
-                opcional.
+                Empresas: nome, empresa, e-mail, WhatsApp, vaga desejada, quantidade de colaboradores desejada,
+                prazo de contratação e mensagem opcional.
               </li>
               <li>
                 Candidatos: nome, e-mail, WhatsApp, cidade/estado, área de atuação, cargo atual ou mais recente,
