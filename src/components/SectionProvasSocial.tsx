@@ -3,7 +3,37 @@
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 
-const parceiros = ['ADCOS', 'ARTE OURO', 'PANDA POOL', 'GBELLA', 'GBELLE BIJOUX', 'LIFE LASER']
+const parceiros = [
+  {
+    nome: 'ADCOS',
+    logo: '/imagens/clientes/site/adcos.png',
+    width: 290,
+    height: 212,
+    logoClassName: 'parceiro-logo--adcos',
+  },
+  {
+    nome: 'ARTE OURO',
+    logo: '/imagens/clientes/site/arte-ouro.png',
+    width: 472,
+    height: 139,
+  },
+  {
+    nome: 'PANDA POOL',
+    logo: '/imagens/clientes/site/panda-pool.png',
+    width: 257,
+    height: 204,
+    logoClassName: 'parceiro-logo--compact',
+  },
+  { nome: 'GBELLA' },
+  { nome: 'GBELLE BIJOUX' },
+  {
+    nome: 'LIFE LASER',
+    logo: '/imagens/clientes/site/life-laser.png',
+    width: 289,
+    height: 202,
+    logoClassName: 'parceiro-logo--life-laser',
+  },
+]
 
 const depoimentos = [
   {
@@ -51,9 +81,19 @@ export default function SectionProvasSocial() {
             <div className="parceiros-fade parceiros-fade--right" />
             <div className="marquee-track">
               {[...parceiros, ...parceiros].map((parceiro, index) => (
-                <div className="parceiro-item" key={`${parceiro}-${index}`}>
+                <div className="parceiro-item" key={`${parceiro.nome}-${index}`}>
                   <span aria-hidden="true">◆</span>
-                  <strong>{parceiro}</strong>
+                  {parceiro.logo ? (
+                    <Image
+                      className={`parceiro-logo ${parceiro.logoClassName ?? ''}`}
+                      src={parceiro.logo}
+                      alt={`Logo ${parceiro.nome}`}
+                      width={parceiro.width}
+                      height={parceiro.height}
+                    />
+                  ) : (
+                    <strong>{parceiro.nome}</strong>
+                  )}
                 </div>
               ))}
             </div>
@@ -145,6 +185,7 @@ export default function SectionProvasSocial() {
         .parceiros-marquee {
           position: relative;
           overflow: hidden;
+          min-height: 68px;
           border-top: 1px solid var(--cinza-suave);
           border-bottom: 1px solid var(--cinza-suave);
           background: rgba(250,245,238,0.72);
@@ -172,9 +213,12 @@ export default function SectionProvasSocial() {
         .parceiro-item {
           display: flex;
           align-items: center;
+          justify-content: center;
           gap: 14px;
           flex: 0 0 auto;
-          padding: 18px 46px;
+          min-width: 220px;
+          min-height: 68px;
+          padding: 10px 38px;
           color: var(--cinza-escuro);
         }
 
@@ -189,6 +233,33 @@ export default function SectionProvasSocial() {
           font-weight: 500;
           letter-spacing: 0.12em;
           text-transform: uppercase;
+        }
+
+        .parceiro-logo {
+          display: block;
+          width: auto;
+          height: auto;
+          max-width: 162px;
+          max-height: 46px;
+          object-fit: contain;
+        }
+
+        .parceiro-logo--adcos,
+        .parceiro-logo--compact,
+        .parceiro-logo--life-laser {
+          max-height: 52px;
+        }
+
+        .parceiro-logo--adcos {
+          max-width: 96px;
+        }
+
+        .parceiro-logo--compact {
+          max-width: 90px;
+        }
+
+        .parceiro-logo--life-laser {
+          max-width: 132px;
         }
 
         .depoimentos-carousel {
@@ -330,7 +401,26 @@ export default function SectionProvasSocial() {
         @media (max-width: 768px) {
           .depoimentos-header { margin-bottom: 42px; }
           .parceiros-fade { width: 56px; }
-          .parceiro-item { padding: 16px 30px; }
+          .parceiro-item {
+            min-width: 180px;
+            padding: 10px 26px;
+          }
+          .parceiro-logo {
+            max-width: 138px;
+            max-height: 42px;
+          }
+          .parceiro-logo--adcos {
+            max-width: 84px;
+            max-height: 48px;
+          }
+          .parceiro-logo--compact {
+            max-width: 80px;
+            max-height: 48px;
+          }
+          .parceiro-logo--life-laser {
+            max-width: 118px;
+            max-height: 46px;
+          }
           .testimonial-card {
             grid-template-columns: 1fr;
             gap: 16px;
