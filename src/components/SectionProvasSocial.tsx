@@ -39,17 +39,22 @@ const depoimentos = [
   {
     texto: 'O briefing trouxe clareza para a vaga e reduziu muito o tempo até chegarem finalistas com perfil compatível.',
     nome: 'GBella',
-    foto: '/imagens/depoimentos/rafaela-mendonca.svg',
   },
   {
     texto: 'A Porto Talent entendeu a rotina da operação e apresentou candidatos mais alinhados ao atendimento da clínica.',
     nome: 'Life Laser',
-    foto: '/imagens/depoimentos/thiago-albuquerque.svg',
+    logo: '/imagens/clientes/site/life-laser.png',
+    logoWidth: 289,
+    logoHeight: 202,
+    logoClassName: 'testimonial-logo--life-laser',
   },
   {
     texto: 'Recebemos uma seleção objetiva, com parecer claro sobre cada perfil. O processo ficou mais simples para decidir.',
     nome: 'ADCOS',
-    foto: '/imagens/depoimentos/carlos-henrique-souza.svg',
+    logo: '/imagens/clientes/site/adcos.png',
+    logoWidth: 290,
+    logoHeight: 212,
+    logoClassName: 'testimonial-logo--adcos',
   },
 ]
 
@@ -105,15 +110,18 @@ export default function SectionProvasSocial() {
 
           <article className="testimonial-card reveal reveal-delay-1" aria-live="polite" key={depoimento.nome}>
             <div className="testimonial-person">
-              <Image
-                className="testimonial-photo"
-                src={depoimento.foto}
-                alt={`Representação de ${depoimento.nome}`}
-                width={72}
-                height={72}
-              />
-              <div>
-                <h3>{depoimento.nome}</h3>
+              <div className="testimonial-logo-mark">
+                {depoimento.logo ? (
+                  <Image
+                    className={`testimonial-logo ${depoimento.logoClassName ?? ''}`}
+                    src={depoimento.logo}
+                    alt={`Logo ${depoimento.nome}`}
+                    width={depoimento.logoWidth}
+                    height={depoimento.logoHeight}
+                  />
+                ) : (
+                  <span className="testimonial-logo-fallback">{depoimento.nome}</span>
+                )}
               </div>
             </div>
 
@@ -278,7 +286,7 @@ export default function SectionProvasSocial() {
         .testimonial-card {
           position: relative;
           display: grid;
-          grid-template-columns: 180px 1fr;
+          grid-template-columns: 96px 1fr;
           gap: 28px;
           align-items: center;
           min-height: 178px;
@@ -293,34 +301,49 @@ export default function SectionProvasSocial() {
         .testimonial-person {
           display: flex;
           align-items: center;
-          gap: 14px;
+          justify-content: center;
           text-align: left;
         }
 
-        .testimonial-photo {
+        .testimonial-logo-mark {
           width: 72px;
           height: 72px;
           border-radius: 50%;
-          object-fit: cover;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
           border: 2px solid rgba(184,147,90,0.7);
           box-shadow: 0 10px 24px rgba(14,14,14,0.12);
-          background: var(--bege);
+          background: rgba(255,255,255,0.72);
           flex-shrink: 0;
         }
 
-        .testimonial-person h3 {
-          font-family: var(--font-sans);
-          font-size: 16px;
-          font-weight: 700;
-          color: var(--preto);
-          margin-bottom: 3px;
+        .testimonial-logo {
+          display: block;
+          width: auto;
+          height: auto;
+          max-width: 58px;
+          max-height: 46px;
+          object-fit: contain;
         }
 
-        .testimonial-person p {
-          font-family: var(--font-sans);
-          font-size: 12px;
-          line-height: 1.35;
-          color: var(--cinza-medio);
+        .testimonial-logo--adcos {
+          max-width: 50px;
+          max-height: 54px;
+        }
+
+        .testimonial-logo--life-laser {
+          max-width: 60px;
+          max-height: 42px;
+        }
+
+        .testimonial-logo-fallback {
+          font-family: var(--font-serif);
+          font-size: 15px;
+          font-weight: 600;
+          line-height: 1;
+          color: var(--preto);
         }
 
         .testimonial-quote {
