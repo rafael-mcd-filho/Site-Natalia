@@ -62,9 +62,13 @@ button, a, [role="button"] { touch-action: manipulation; }
 .gold-line--large { width: 80px; }
 
 .reveal {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.6s var(--ease-out), transform 0.6s var(--ease-out);
+}
+.reveal.is-waiting {
   opacity: 0;
   transform: translateY(20px);
-  transition: opacity 0.6s var(--ease-out), transform 0.6s var(--ease-out);
 }
 .reveal.is-visible { opacity: 1; transform: translateY(0); }
 .reveal-delay-1 { transition-delay: 80ms; }

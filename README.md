@@ -34,3 +34,18 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Form Tracking
+
+The forms push these custom events to `window.dataLayer` without personal data. Google Tag Manager is configured outside this application.
+
+| Event | When it is sent |
+| --- | --- |
+| `lead_submit_attempt` | A valid form starts the API request |
+| `lead_submit_error` | Validation or request submission fails |
+| `lead_submit_success` | The API confirms that the lead was saved |
+| `lead_form_submit` | The API confirms a conversion |
+
+Create a GTM Custom Event trigger for `lead_form_submit`. Use the `form_id2` data layer variable to filter `lead-form-empresa` or `lead-form-candidato`.
+
+Before publishing analytics or advertising tags, configure the applicable consent behavior in GTM or through a consent management platform.

@@ -3,8 +3,22 @@
 import { ArrowRight, CheckCircle2, Clock, Handshake, Send, ShieldCheck } from 'lucide-react'
 import { useState, FormEvent } from 'react'
 import Link from 'next/link'
-import { trackEvent } from '@/lib/tracking'
+import {
+  trackLeadSubmitAttempt,
+  trackLeadSubmitError,
+  trackLeadSubmitSuccess,
+  type LeadTrackingPayload,
+} from '@/lib/tracking'
 import { getLeadTracking } from '@/lib/lead-tracking'
+
+const trackingPayload: LeadTrackingPayload = {
+  type: 'empresa',
+  lead_type: 'empresa',
+  form_id: 'lead-form-empresa',
+  form_id2: 'lead-form-empresa',
+  form_name: 'contato_empresa',
+  form_location: 'contato',
+}
 
 const prazoOpcoes = ['Urgente', 'Em até 30 dias', 'Em até 60 dias', 'Ainda planejando']
 const quantidadeColaboradoresOpcoes = [
@@ -49,10 +63,14 @@ export default function SectionCTAEmpresa() {
     }
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) {
+      trackLeadSubmitError(trackingPayload, 'validation', {
+        invalid_fields_count: Object.keys(errors).length,
+      })
       setErrorMessage(Object.values(errors)[0] || 'Revise os campos.')
       setStatus('error')
       return
     }
+    trackLeadSubmitAttempt(trackingPayload)
     setStatus('loading')
     setErrorMessage('')
 
@@ -69,8 +87,9 @@ export default function SectionCTAEmpresa() {
       }
 
       setStatus('success')
-      trackEvent('lead_submit_success', { type: 'empresa' })
+      trackLeadSubmitSuccess(trackingPayload)
     } catch (error) {
+      trackLeadSubmitError(trackingPayload, 'request')
       setErrorMessage(error instanceof Error ? error.message : 'Erro ao enviar. Tente novamente.')
       setStatus('error')
     }
@@ -138,7 +157,7 @@ export default function SectionCTAEmpresa() {
                 </p>
               </div>
             ) : (
-              <form onSubmit={handleSubmit}>
+              <form id={trackingPayload.form_id} data-lead-type={trackingPayload.lead_type} onSubmit={handleSubmit}>
                 <div style={{ position: 'absolute', left: -10000, width: 1, height: 1, overflow: 'hidden' }} aria-hidden="true">
                   <label>
                     Site

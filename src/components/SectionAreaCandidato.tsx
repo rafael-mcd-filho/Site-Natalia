@@ -3,8 +3,22 @@
 import { CheckCircle2, FileCheck, UploadCloud } from 'lucide-react'
 import Link from 'next/link'
 import { useState, useRef, FormEvent } from 'react'
-import { trackEvent } from '@/lib/tracking'
+import {
+  trackLeadSubmitAttempt,
+  trackLeadSubmitError,
+  trackLeadSubmitSuccess,
+  type LeadTrackingPayload,
+} from '@/lib/tracking'
 import { getLeadTracking } from '@/lib/lead-tracking'
+
+const trackingPayload: LeadTrackingPayload = {
+  type: 'candidato',
+  lead_type: 'candidato',
+  form_id: 'lead-form-candidato',
+  form_id2: 'lead-form-candidato',
+  form_name: 'cadastro_candidato',
+  form_location: 'candidatos',
+}
 
 const areas = ['Comercial', 'Administrativo', 'Operacional', 'Outro']
 const experiencias = ['Menos de 1 ano', '1 a 3 anos', '3 a 5 anos', 'Mais de 5 anos']
@@ -63,10 +77,15 @@ export default function SectionAreaCandidato() {
     }
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) {
+      trackLeadSubmitError(trackingPayload, 'validation', {
+        has_cv: Boolean(arquivo),
+        invalid_fields_count: Object.keys(errors).length,
+      })
       setErrorMessage(Object.values(errors)[0] || 'Revise os campos.')
       setStatus('error')
       return
     }
+    trackLeadSubmitAttempt(trackingPayload)
     setStatus('loading')
     setErrorMessage('')
 
@@ -92,8 +111,9 @@ export default function SectionAreaCandidato() {
       }
 
       setStatus('success')
-      trackEvent('lead_submit_success', { type: 'candidato', has_cv: Boolean(arquivo) })
+      trackLeadSubmitSuccess(trackingPayload, { has_cv: Boolean(arquivo) })
     } catch (error) {
+      trackLeadSubmitError(trackingPayload, 'request', { has_cv: Boolean(arquivo) })
       setErrorMessage(error instanceof Error ? error.message : 'Erro ao enviar. Tente novamente.')
       setStatus('error')
     }
@@ -169,7 +189,7 @@ export default function SectionAreaCandidato() {
                   </p>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit}>
+                <form id={trackingPayload.form_id} data-lead-type={trackingPayload.lead_type} onSubmit={handleSubmit}>
                   <div style={{ position: 'absolute', left: -10000, width: 1, height: 1, overflow: 'hidden' }} aria-hidden="true">
                     <label>
                       Site

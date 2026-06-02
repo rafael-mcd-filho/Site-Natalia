@@ -105,6 +105,28 @@ export default function SectionProvasSocial() {
           </div>
         </div>
 
+        <article className="video-testimonial reveal reveal-delay-1">
+          <div className="video-testimonial-player">
+            <video controls playsInline preload="none" poster="/videos/depoimento-poster.webp" aria-label="Depoimento em vídeo de Burgos Campos">
+              <source src="/videos/depoimento.mp4" type="video/mp4" />
+              Seu navegador não suporta a reprodução de vídeos.
+            </video>
+          </div>
+
+          <div className="video-testimonial-copy">
+            <Image
+              className="video-testimonial-logo"
+              src="/imagens/clientes/site/panda-pool.png"
+              alt="Logo Panda Pool"
+              width={257}
+              height={204}
+            />
+            <h3>Burgos Campos</h3>
+            <p>Franqueado da Panda Pool João Pessoa</p>
+            <span>Supervisor nacional da Panda Pool</span>
+          </div>
+        </article>
+
         <div className="depoimentos-carousel" role="region" aria-roledescription="carrossel" aria-label="Depoimentos de clientes">
           <p className="reveal depoimentos-subtitle">O que dizem sobre o nosso trabalho</p>
 
@@ -168,6 +190,79 @@ export default function SectionProvasSocial() {
         .depoimentos-header {
           margin-bottom: 54px;
           text-align: center;
+        }
+
+        .video-testimonial {
+          display: grid;
+          grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1fr);
+          max-width: 760px;
+          margin: 0 auto 64px;
+          overflow: hidden;
+          border: 1px solid var(--cinza-suave);
+          border-radius: 8px;
+          background: var(--bege-creme);
+          box-shadow: 0 22px 58px rgba(14,14,14,0.1);
+        }
+
+        .video-testimonial-player {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--bege-creme);
+        }
+
+        .video-testimonial-player video {
+          display: block;
+          width: 100%;
+          aspect-ratio: 9 / 16;
+          object-fit: contain;
+          background: #000;
+        }
+
+        .video-testimonial-copy {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          justify-content: center;
+          padding: 34px 30px;
+          border-left: 1px solid var(--cinza-suave);
+        }
+
+        .video-testimonial-logo {
+          display: block;
+          width: auto;
+          height: auto;
+          max-width: 88px;
+          max-height: 64px;
+          margin-bottom: 18px;
+          object-fit: contain;
+        }
+
+        .video-testimonial-copy h3 {
+          margin-bottom: 10px;
+          font-family: var(--font-serif);
+          font-size: 30px;
+          font-weight: 500;
+          line-height: 1.08;
+          color: var(--preto);
+        }
+
+        .video-testimonial-copy p {
+          margin-bottom: 10px;
+          font-family: var(--font-sans);
+          font-size: 15px;
+          line-height: 1.55;
+          color: var(--cinza-escuro);
+        }
+
+        .video-testimonial-copy span {
+          font-family: var(--font-sans);
+          font-size: 12px;
+          font-weight: 700;
+          line-height: 1.5;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: var(--dourado);
         }
 
         .depoimentos-label {
@@ -423,6 +518,23 @@ export default function SectionProvasSocial() {
 
         @media (max-width: 768px) {
           .depoimentos-header { margin-bottom: 42px; }
+          .video-testimonial {
+            grid-template-columns: 1fr;
+            margin-bottom: 52px;
+          }
+          .video-testimonial-copy {
+            padding: 24px 22px 26px;
+            border-top: 1px solid var(--cinza-suave);
+            border-left: 0;
+          }
+          .video-testimonial-logo {
+            max-width: 76px;
+            max-height: 56px;
+            margin-bottom: 14px;
+          }
+          .video-testimonial-copy h3 {
+            font-size: 26px;
+          }
           .parceiros-fade { width: 56px; }
           .parceiro-item {
             min-width: 180px;
