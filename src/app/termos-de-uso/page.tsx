@@ -4,8 +4,8 @@ import { createMetadata } from '@/lib/seo'
 import styles from '../legal.module.css'
 
 export const metadata: Metadata = createMetadata({
-  title: 'Termos de Uso | Porto Talent',
-  description: 'Condições de uso do site e dos formulários da Porto Talent.',
+  title: 'Termos de Uso e Política de Privacidade | Porto Talent',
+  description: 'Condições de uso do site e política de privacidade da Porto Talent.',
   path: '/termos-de-uso',
 })
 
@@ -22,7 +22,7 @@ export default function TermosDeUsoPage() {
       <article className={styles.main}>
         <span className={styles.eyebrow}>Termos</span>
         <h1 className={styles.title}>Termos de Uso</h1>
-        <p className={styles.updated}>Última atualização: 5 de maio de 2026.</p>
+        <p className={styles.updated}>Última atualização: 02 de junho de 2026.</p>
 
         <div className={styles.content}>
           <section className={styles.note}>
@@ -106,8 +106,9 @@ export default function TermosDeUsoPage() {
           <section className={styles.section}>
             <h2>9. Privacidade e proteção de dados</h2>
             <p>
-              O tratamento de dados pessoais segue a nossa{' '}
-              <Link href="/politica-de-privacidade">Política de Privacidade</Link>, que integra estes termos.
+              O tratamento de dados pessoais segue a{' '}
+              <Link href="#politica-de-privacidade">Política de Privacidade e Proteção de Dados Pessoais</Link>, que
+              integra estes termos.
             </p>
           </section>
 
@@ -124,6 +125,91 @@ export default function TermosDeUsoPage() {
             <p>
               Estes termos são regidos pelas leis brasileiras. Eventuais controvérsias serão tratadas preferencialmente
               por contato direto com a Porto Talent e, se necessário, pelos meios legais competentes.
+            </p>
+          </section>
+
+          <section className={styles.section} id="politica-de-privacidade">
+            <h2>Política de Privacidade e Proteção de Dados Pessoais</h2>
+            <p>
+              A Porto Talent Consultoria e Recrutamento, inscrita no CNPJ nº 63.164.361/0001-93, respeita a privacidade
+              e a proteção dos dados pessoais de seus candidatos, clientes, parceiros e usuários. Esta Política de
+              Privacidade foi elaborada em conformidade com a Lei nº 13.709/2018 (LGPD).
+            </p>
+
+            <h3>1. Quem somos</h3>
+            <p>
+              A Porto Talent atua na prestação de serviços de recrutamento, seleção, avaliação de perfil profissional,
+              treinamento e consultoria de recursos humanos.
+            </p>
+
+            <h3>2. Dados pessoais coletados</h3>
+            <ul>
+              <li>Nome completo, CPF, RG, data de nascimento e endereço;</li>
+              <li>Telefone, WhatsApp e e-mail;</li>
+              <li>Currículo, histórico profissional, formação acadêmica e certificações;</li>
+              <li>Informações fornecidas em entrevistas e processos seletivos;</li>
+              <li>Dados de navegação quando houver acesso ao site.</li>
+            </ul>
+
+            <h3>3. Finalidades do tratamento</h3>
+            <ul>
+              <li>Realização de processos seletivos;</li>
+              <li>Formação de banco de talentos;</li>
+              <li>Encaminhamento para vagas compatíveis;</li>
+              <li>Contato sobre oportunidades profissionais;</li>
+              <li>Cumprimento de obrigações legais e regulatórias.</li>
+            </ul>
+
+            <h3>4. Bases legais</h3>
+            <p>
+              O tratamento dos dados ocorre com base no consentimento do titular, execução contratual, cumprimento de
+              obrigação legal, legítimo interesse e demais hipóteses previstas na LGPD.
+            </p>
+
+            <h3>5. Compartilhamento de dados</h3>
+            <p>
+              Os dados poderão ser compartilhados com empresas contratantes, fornecedores de tecnologia e autoridades
+              competentes quando exigido por lei. A Porto Talent não comercializa dados pessoais.
+            </p>
+
+            <h3>6. Banco de talentos</h3>
+            <p>
+              Os currículos poderão permanecer em banco de talentos para futuras oportunidades, podendo o titular
+              solicitar sua exclusão a qualquer momento.
+            </p>
+
+            <h3>7. Cookies</h3>
+            <p>O site poderá utilizar cookies para melhorar a experiência do usuário e gerar estatísticas de acesso.</p>
+
+            <h3>8. Segurança dos dados</h3>
+            <p>
+              São adotadas medidas técnicas e administrativas para proteção contra acessos não autorizados, perdas,
+              alterações ou divulgações indevidas.
+            </p>
+
+            <h3>9. Prazo de retenção</h3>
+            <p>
+              Os dados serão mantidos pelo período necessário para cumprir as finalidades desta política e exigências
+              legais.
+            </p>
+
+            <h3>10. Direitos dos titulares</h3>
+            <p>
+              O titular poderá solicitar acesso, correção, exclusão, portabilidade, revogação do consentimento e demais
+              direitos previstos na LGPD.
+            </p>
+
+            <h3>11. Canal de atendimento</h3>
+            <p>Porto Talent Consultoria e Recrutamento</p>
+            <p>CNPJ: 63.164.361/0001-93</p>
+
+            <h3>12. Alterações da política</h3>
+            <p>Esta política poderá ser atualizada periodicamente para adequação legal e operacional.</p>
+
+            <h3>Declaração de consentimento</h3>
+            <p>
+              Ao enviar seu currículo ou utilizar os serviços da Porto Talent, o titular declara estar ciente e concordar
+              com os termos desta Política de Privacidade.
             </p>
           </section>
 

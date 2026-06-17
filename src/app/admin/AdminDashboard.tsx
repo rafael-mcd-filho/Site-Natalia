@@ -29,6 +29,7 @@ import {
   RefreshCcw,
   Save,
   SlidersHorizontal,
+  Sparkles,
   Trash2,
   UserRound,
   X,
@@ -36,10 +37,10 @@ import {
 import { trackEvent } from '@/lib/tracking'
 import styles from './AdminDashboard.module.css'
 
-type Tab = 'candidatos' | 'empresas' | 'kanban'
-type LeadType = 'candidato' | 'empresa'
+type Tab = 'candidatos' | 'empresas' | 'interesses' | 'kanban'
+type LeadType = 'candidato' | 'empresa' | 'interesse'
 type LeadAction = 'archive' | 'restore'
-type LeadTab = 'candidatos' | 'empresas'
+type LeadTab = 'candidatos' | 'empresas' | 'interesses'
 type ToastTone = 'success' | 'error' | 'info'
 
 type BaseLead = {
@@ -69,6 +70,10 @@ type EmpresaLead = BaseLead & {
   quantidade_colaboradores?: string | null
   prazo?: string | null
   mensagem?: string | null
+}
+
+type InteresseLead = BaseLead & {
+  servico?: string | null
 }
 
 type CandidatoLead = BaseLead & {
@@ -111,6 +116,7 @@ type KanbanBoard = {
 type LeadsResponse = {
   candidatos: CandidatoLead[]
   empresas: EmpresaLead[]
+  interesses: InteresseLead[]
   serviceRole: boolean
   message?: string
 }
@@ -172,6 +178,10 @@ const getLeadLabel = (type: LeadType, lead: BaseLead) => {
 
   if (type === 'candidato') {
     return name ? `currículo de ${name}` : 'currículo'
+  }
+
+  if (type === 'interesse') {
+    return name ? `interesse de ${name}` : 'interesse em serviço'
   }
 
   return name ? `solicitação de ${name}` : 'solicitação da empresa'
@@ -453,6 +463,7 @@ export default function AdminDashboard({
   const [showArchivedBoards, setShowArchivedBoards] = useState(false)
   const [candidatos, setCandidatos] = useState<CandidatoLead[]>([])
   const [empresas, setEmpresas] = useState<EmpresaLead[]>([])
+  const [interesses, setInteresses] = useState<InteresseLead[]>([])
   const [boards, setBoards] = useState<KanbanBoard[]>([])
   const [activeBoardsCount, setActiveBoardsCount] = useState(0)
   const [archivedBoardsCount, setArchivedBoardsCount] = useState(0)
@@ -478,6 +489,7 @@ export default function AdminDashboard({
   const [notesDraft, setNotesDraft] = useState('')
   const [selectedCandidatoIds, setSelectedCandidatoIds] = useState<string[]>([])
   const [selectedEmpresaIds, setSelectedEmpresaIds] = useState<string[]>([])
+  const [selectedInteresseIds, setSelectedInteresseIds] = useState<string[]>([])
   const [confirmation, setConfirmation] = useState<ConfirmationState | null>(null)
   const [toasts, setToasts] = useState<ToastState[]>([])
   const [editingBoardTitle, setEditingBoardTitle] = useState(false)
@@ -501,6 +513,12 @@ export default function AdminDashboard({
     empresa: '',
   })
 
+  const [interesseFilters, setInteresseFilters] = useState({
+    nome: '',
+    email: '',
+    servico: '',
+  })
+
   const visibleCandidatos = useMemo(
     () => candidatos.filter(candidato => showArchived ? isArchived(candidato) : !isArchived(candidato)),
     [candidatos, showArchived]
@@ -508,6 +526,10 @@ export default function AdminDashboard({
   const visibleEmpresas = useMemo(
     () => empresas.filter(empresa => showArchived ? isArchived(empresa) : !isArchived(empresa)),
     [empresas, showArchived]
+  )
+  const visibleInteresses = useMemo(
+    () => interesses.filter(interesse => showArchived ? isArchived(interesse) : !isArchived(interesse)),
+    [interesses, showArchived]
   )
 
   const areaOptions = useMemo(
@@ -540,6 +562,16 @@ export default function AdminDashboard({
         matchesText(empresa.empresa, empresaFilters.empresa)
       ),
     [visibleEmpresas, empresaFilters]
+  )
+
+  const filteredInteresses = useMemo(
+    () =>
+      visibleInteresses.filter(interesse =>
+        matchesText(interesse.nome, interesseFilters.nome) &&
+        matchesText(interesse.email, interesseFilters.email) &&
+        matchesText(interesse.servico, interesseFilters.servico)
+      ),
+    [visibleInteresses, interesseFilters]
   )
 
   const activeBoard = useMemo(
@@ -596,29 +628,50 @@ export default function AdminDashboard({
     () => kanbanCandidates.find(candidato => candidato.id === selectedCandidateId) ?? null,
     [kanbanCandidates, selectedCandidateId]
   )
-  const currentLeadType: LeadType = activeTab === 'empresas' ? 'empresa' : 'candidato'
-  const currentSelectedIds = activeTab === 'empresas' ? selectedEmpresaIds : selectedCandidatoIds
+  const currentLeadType: LeadType =
+    activeTab === 'empresas' ? 'empresa' : activeTab === 'interesses' ? 'interesse' : 'candidato'
+  const currentSelectedIds =
+    activeTab === 'empresas'
+      ? selectedEmpresaIds
+      : activeTab === 'interesses'
+        ? selectedInteresseIds
+        : selectedCandidatoIds
+  const currentFilteredRows =
+    activeTab === 'empresas'
+      ? filteredEmpresas
+      : activeTab === 'interesses'
+        ? filteredInteresses
+        : filteredCandidatos
   const currentFilteredIds = useMemo(
     () =>
-      (activeTab === 'empresas' ? filteredEmpresas : filteredCandidatos)
+      currentFilteredRows
         .map(item => item.id)
         .filter(Boolean) as string[],
-    [activeTab, filteredCandidatos, filteredEmpresas]
+    [currentFilteredRows]
   )
   const allCurrentFilteredSelected =
     currentFilteredIds.length > 0 && currentFilteredIds.every(id => currentSelectedIds.includes(id))
   const activeFiltersCount =
     activeTab === 'empresas'
       ? Object.values(empresaFilters).filter(Boolean).length
-      : Object.values(candidatoFilters).filter(Boolean).length
-  const currentFilteredLeads = activeTab === 'empresas' ? filteredEmpresas : filteredCandidatos
+      : activeTab === 'interesses'
+        ? Object.values(interesseFilters).filter(Boolean).length
+        : Object.values(candidatoFilters).filter(Boolean).length
+  const currentFilteredLeads = currentFilteredRows
   const currentRecentCount = currentFilteredLeads.filter(lead => !isArchived(lead) && isRecentLead(lead)).length
   const currentArchivedCount = currentFilteredLeads.filter(isArchived).length
-  const currentPanelTitle = activeTab === 'empresas' ? 'Solicitacoes de empresas' : 'Curriculos recebidos'
+  const currentPanelTitle =
+    activeTab === 'empresas'
+      ? 'Solicitações de empresas'
+      : activeTab === 'interesses'
+        ? 'Interesses em serviços'
+        : 'Currículos recebidos'
   const currentPanelDescription =
     activeTab === 'empresas'
-      ? 'Leads comerciais recebidos pelo formulario de empresas.'
-      : 'Candidatos cadastrados pelo formulario do site.'
+      ? 'Leads comerciais recebidos pelo formulário de empresas.'
+      : activeTab === 'interesses'
+        ? 'Cadastros do CTA de gestão e desenvolvimento de equipes comerciais.'
+        : 'Candidatos cadastrados pelo formulário do site.'
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -632,6 +685,7 @@ export default function AdminDashboard({
         setAuthenticated(false)
         setCandidatos([])
         setEmpresas([])
+        setInteresses([])
         return
       }
 
@@ -642,10 +696,13 @@ export default function AdminDashboard({
 
       const nextCandidatos = sortByCreatedAt(data.candidatos || [])
       const nextEmpresas = sortByCreatedAt(data.empresas || [])
+      const nextInteresses = sortByCreatedAt(data.interesses || [])
       setCandidatos(nextCandidatos)
       setEmpresas(nextEmpresas)
+      setInteresses(nextInteresses)
       setSelectedCandidatoIds(ids => ids.filter(id => nextCandidatos.some(candidato => candidato.id === id)))
       setSelectedEmpresaIds(ids => ids.filter(id => nextEmpresas.some(empresa => empresa.id === id)))
+      setSelectedInteresseIds(ids => ids.filter(id => nextInteresses.some(interesse => interesse.id === id)))
       setServiceRole(Boolean(data.serviceRole))
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : 'Erro inesperado ao carregar dados.')
@@ -726,7 +783,12 @@ export default function AdminDashboard({
       return
     }
 
-    setSelectedEmpresaIds(updater)
+    if (tab === 'empresas') {
+      setSelectedEmpresaIds(updater)
+      return
+    }
+
+    setSelectedInteresseIds(updater)
   }
 
   const toggleLeadSelection = (tab: LeadTab, id?: string) => {
@@ -783,6 +845,7 @@ export default function AdminDashboard({
     setAuthenticated(false)
     setCandidatos([])
     setEmpresas([])
+    setInteresses([])
     setBoards([])
   }
 
@@ -853,8 +916,10 @@ export default function AdminDashboard({
 
           if (type === 'candidato') {
             setCandidatos(items => sortByCreatedAt(items.map(item => updater(item) as CandidatoLead)))
-          } else {
+          } else if (type === 'empresa') {
             setEmpresas(items => sortByCreatedAt(items.map(item => updater(item) as EmpresaLead)))
+          } else {
+            setInteresses(items => sortByCreatedAt(items.map(item => updater(item) as InteresseLead)))
           }
           showToast(action === 'archive' ? 'Registro arquivado.' : 'Registro restaurado.')
         } catch (error) {
@@ -874,7 +939,9 @@ export default function AdminDashboard({
     const extraWarning =
       type === 'candidato'
         ? 'Se houver arquivo de currículo anexado, ele também será removido quando possível.'
-        : 'A solicitação da empresa será removida do painel.'
+        : type === 'empresa'
+          ? 'A solicitação da empresa será removida do painel.'
+          : 'O interesse em serviço será removido do painel.'
     askConfirmation({
       title: 'Excluir permanentemente',
       message: `Você está prestes a excluir este ${label}.`,
@@ -901,9 +968,12 @@ export default function AdminDashboard({
             setCandidatos(items => items.filter(item => item.id !== lead.id))
             setSelectedCandidatoIds(ids => ids.filter(id => id !== lead.id))
             await loadKanban()
-          } else {
+          } else if (type === 'empresa') {
             setEmpresas(items => items.filter(item => item.id !== lead.id))
             setSelectedEmpresaIds(ids => ids.filter(id => id !== lead.id))
+          } else {
+            setInteresses(items => items.filter(item => item.id !== lead.id))
+            setSelectedInteresseIds(ids => ids.filter(id => id !== lead.id))
           }
           setSelectedLead(current => current?.lead.id === lead.id ? null : current)
           showToast('Registro excluído.')
@@ -940,8 +1010,10 @@ export default function AdminDashboard({
       const updater = (item: BaseLead) => item.id === lead.id ? { ...item, ...data.lead } : item
       if (type === 'candidato') {
         setCandidatos(items => sortByCreatedAt(items.map(item => updater(item) as CandidatoLead)))
-      } else {
+      } else if (type === 'empresa') {
         setEmpresas(items => sortByCreatedAt(items.map(item => updater(item) as EmpresaLead)))
+      } else {
+        setInteresses(items => sortByCreatedAt(items.map(item => updater(item) as InteresseLead)))
       }
       setSelectedLead({ type, lead: { ...lead, ...data.lead } })
       showToast('Observações salvas.')
@@ -956,43 +1028,56 @@ export default function AdminDashboard({
 
   const exportCurrentCsv = () => {
     if (activeTab === 'kanban') return
-    const isEmpresa = activeTab === 'empresas'
-    const rows = isEmpresa ? filteredEmpresas : filteredCandidatos
-    const headers = isEmpresa
-      ? ['Nome', 'Email', 'WhatsApp', 'Empresa', 'Vaga', 'Quantidade de colaboradores', 'Prazo', 'Mensagem', 'Status', 'Recebido', 'UTM source', 'UTM campaign']
-      : ['Nome', 'Email', 'WhatsApp', 'Cidade', 'Cargo', 'Área', 'Experiência', 'Salário', 'LinkedIn', 'Status', 'Recebido', 'UTM source', 'UTM campaign']
-    const bodyRows = rows.map(item =>
-      isEmpresa
-        ? [
+
+    const headers =
+      activeTab === 'empresas'
+        ? ['Nome', 'Email', 'WhatsApp', 'Empresa', 'Vaga', 'Quantidade de colaboradores', 'Prazo', 'Mensagem', 'Status', 'Recebido', 'UTM source', 'UTM campaign']
+        : activeTab === 'interesses'
+          ? ['Nome', 'Email', 'Serviço', 'Origem', 'Status', 'Recebido', 'UTM source', 'UTM campaign']
+          : ['Nome', 'Email', 'WhatsApp', 'Cidade', 'Cargo', 'Área', 'Experiência', 'Salário', 'LinkedIn', 'Status', 'Recebido', 'UTM source', 'UTM campaign']
+    const bodyRows =
+      activeTab === 'empresas'
+        ? filteredEmpresas.map(item => [
             item.nome,
             item.email,
             item.whatsapp,
-            (item as EmpresaLead).empresa,
-            (item as EmpresaLead).vaga,
-            (item as EmpresaLead).quantidade_colaboradores,
-            (item as EmpresaLead).prazo,
-            (item as EmpresaLead).mensagem,
+            item.empresa,
+            item.vaga,
+            item.quantidade_colaboradores,
+            item.prazo,
+            item.mensagem,
             item.status,
             formatDate(item.created_at),
             item.utm_source,
             item.utm_campaign,
-          ]
-        : [
-            item.nome,
-            item.email,
-            item.whatsapp,
-            (item as CandidatoLead).cidade_estado,
-            (item as CandidatoLead).cargo_atual,
-            (item as CandidatoLead).area_atuacao,
-            (item as CandidatoLead).experiencia,
-            (item as CandidatoLead).pretensao_salarial,
-            (item as CandidatoLead).linkedin,
-            item.status,
-            formatDate(item.created_at),
-            item.utm_source,
-            item.utm_campaign,
-          ]
-    )
+          ])
+        : activeTab === 'interesses'
+          ? filteredInteresses.map(item => [
+              item.nome,
+              item.email,
+              item.servico,
+              item.origem,
+              item.status,
+              formatDate(item.created_at),
+              item.utm_source,
+              item.utm_campaign,
+            ])
+          : filteredCandidatos.map(item => [
+              item.nome,
+              item.email,
+              item.whatsapp,
+              item.cidade_estado,
+              item.cargo_atual,
+              item.area_atuacao,
+              item.experiencia,
+              item.pretensao_salarial,
+              item.linkedin,
+              item.status,
+              formatDate(item.created_at),
+              item.utm_source,
+              item.utm_campaign,
+            ])
+
     const csv = [headers, ...bodyRows].map(row => row.map(csvCell).join(';')).join('\n')
     const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
@@ -1036,7 +1121,12 @@ export default function AdminDashboard({
   }
 
   const bulkUpdateLeadStatus = (type: LeadType, action: LeadAction) => {
-    const selectedIds = type === 'candidato' ? selectedCandidatoIds : selectedEmpresaIds
+    const selectedIds =
+      type === 'candidato'
+        ? selectedCandidatoIds
+        : type === 'empresa'
+          ? selectedEmpresaIds
+          : selectedInteresseIds
     if (selectedIds.length === 0) return
     const actionText = action === 'archive' ? 'arquivar' : 'restaurar'
 
@@ -1068,9 +1158,12 @@ export default function AdminDashboard({
           if (type === 'candidato') {
             setCandidatos(items => sortByCreatedAt(items.map(item => updater(item) as CandidatoLead)))
             setSelectedCandidatoIds([])
-          } else {
+          } else if (type === 'empresa') {
             setEmpresas(items => sortByCreatedAt(items.map(item => updater(item) as EmpresaLead)))
             setSelectedEmpresaIds([])
+          } else {
+            setInteresses(items => sortByCreatedAt(items.map(item => updater(item) as InteresseLead)))
+            setSelectedInteresseIds([])
           }
           showToast(`${selectedIds.length} registros atualizados.`)
         } catch (error) {
@@ -1083,7 +1176,12 @@ export default function AdminDashboard({
   }
 
   const bulkDeleteLeads = (type: LeadType) => {
-    const selectedIds = type === 'candidato' ? selectedCandidatoIds : selectedEmpresaIds
+    const selectedIds =
+      type === 'candidato'
+        ? selectedCandidatoIds
+        : type === 'empresa'
+          ? selectedEmpresaIds
+          : selectedInteresseIds
     if (selectedIds.length === 0) return
 
     askConfirmation({
@@ -1111,9 +1209,12 @@ export default function AdminDashboard({
             setCandidatos(items => items.filter(item => !selectedIds.includes(item.id || '')))
             setSelectedCandidatoIds([])
             await loadKanban()
-          } else {
+          } else if (type === 'empresa') {
             setEmpresas(items => items.filter(item => !selectedIds.includes(item.id || '')))
             setSelectedEmpresaIds([])
+          } else {
+            setInteresses(items => items.filter(item => !selectedIds.includes(item.id || '')))
+            setSelectedInteresseIds([])
           }
           showToast(`${selectedIds.length} registros excluídos.`)
         } catch (error) {
@@ -1500,6 +1601,9 @@ export default function AdminDashboard({
   const clearEmpresaFilters = () =>
     setEmpresaFilters({ nome: '', email: '', whatsapp: '', empresa: '' })
 
+  const clearInteresseFilters = () =>
+    setInteresseFilters({ nome: '', email: '', servico: '' })
+
   if (!authenticated) {
     return (
       <main className={styles.loginShell}>
@@ -1508,7 +1612,7 @@ export default function AdminDashboard({
             <Lock size={22} />
           </div>
           <h1>Painel Porto Talent</h1>
-          <p>Acesse os currículos recebidos e as solicitações de contato das empresas.</p>
+          <p>Acesse currículos, solicitações de empresas e interesses em serviços.</p>
 
           <label>
             Senha administrativa
@@ -1577,6 +1681,17 @@ export default function AdminDashboard({
             Empresas
           </button>
           <button
+            className={activeTab === 'interesses' ? styles.headerMenuActive : ''}
+            type="button"
+            onClick={() => {
+              setOpenActionMenuId('')
+              setActiveTab('interesses')
+            }}
+          >
+            <Sparkles size={16} />
+            Interesses
+          </button>
+          <button
             className={activeTab === 'kanban' ? styles.headerMenuActive : ''}
             type="button"
             onClick={() => {
@@ -1615,6 +1730,14 @@ export default function AdminDashboard({
             <MetricCard label="novas esta semana" value={empresas.filter(e => !isArchived(e) && isRecentLead(e)).length} icon={<Building2 size={18} />} />
             <MetricCard label="arquivadas" value={empresas.filter(isArchived).length} icon={<Archive size={18} />} />
             <MetricCard label="total recebido" value={empresas.length} icon={<Building2 size={18} />} />
+          </>
+        )}
+        {activeTab === 'interesses' && (
+          <>
+            <MetricCard label="interesses ativos" value={interesses.filter(i => !isArchived(i)).length} icon={<Sparkles size={18} />} />
+            <MetricCard label="novos esta semana" value={interesses.filter(i => !isArchived(i) && isRecentLead(i)).length} icon={<Sparkles size={18} />} />
+            <MetricCard label="arquivados" value={interesses.filter(isArchived).length} icon={<Archive size={18} />} />
+            <MetricCard label="total recebido" value={interesses.length} icon={<Sparkles size={18} />} />
           </>
         )}
         {activeTab === 'kanban' && (
@@ -2060,6 +2183,156 @@ export default function AdminDashboard({
           </>
         )}
 
+        {activeTab === 'interesses' && (
+          <>
+            <div className={styles.tableMetaBar}>
+              <div>
+                <h2>{currentPanelTitle}</h2>
+                <p>{currentPanelDescription}</p>
+              </div>
+              <div className={styles.tableStats}>
+                <span>{filteredInteresses.length} exibidos</span>
+                <span>{currentRecentCount} novos em 7 dias</span>
+                <span>{currentArchivedCount} arquivados</span>
+              </div>
+            </div>
+
+            {filtersOpen && (
+            <div className={styles.filterGrid}>
+              <label>
+                Nome
+                <input
+                  value={interesseFilters.nome}
+                  onChange={event => setInteresseFilters(filters => ({ ...filters, nome: event.target.value }))}
+                  placeholder="Buscar por nome"
+                />
+              </label>
+              <label>
+                E-mail
+                <input
+                  value={interesseFilters.email}
+                  onChange={event => setInteresseFilters(filters => ({ ...filters, email: event.target.value }))}
+                  placeholder="contato@email.com"
+                />
+              </label>
+              <label>
+                Serviço
+                <input
+                  value={interesseFilters.servico}
+                  onChange={event => setInteresseFilters(filters => ({ ...filters, servico: event.target.value }))}
+                  placeholder="Gestão comercial"
+                />
+              </label>
+              <button className={styles.clearButton} type="button" onClick={clearInteresseFilters}>
+                Limpar filtros
+              </button>
+            </div>
+            )}
+
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>
+                      <input
+                        aria-label="Selecionar interesses filtrados"
+                        type="checkbox"
+                        checked={allCurrentFilteredSelected}
+                        onChange={toggleAllCurrentSelection}
+                      />
+                    </th>
+                    <th>Contato</th>
+                    <th>Serviço</th>
+                    <th>Origem</th>
+                    <th>Recebido</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredInteresses.map(interesse => {
+                    const archived = isArchived(interesse)
+                    const mailUrl = getMailUrl(interesse.email, 'Porto Talent - gestão comercial')
+                    const rowId = interesse.id || `${interesse.email}-${interesse.created_at}`
+
+                    return (
+                      <tr key={rowId} className={archived ? styles.archivedRow : ''}>
+                        <td data-label="Selecionar">
+                          <input
+                            aria-label={`Selecionar ${getText(interesse.nome, 'interesse')}`}
+                            type="checkbox"
+                            checked={Boolean(interesse.id && selectedInteresseIds.includes(interesse.id))}
+                            onChange={() => toggleLeadSelection('interesses', interesse.id)}
+                          />
+                        </td>
+                        <td className={styles.primaryCell} data-label="Contato">
+                          <strong>{getText(interesse.nome)}</strong>
+                          <span>{getText(interesse.email)}</span>
+                        </td>
+                        <td data-label="Serviço">
+                          <strong>{getText(interesse.servico)}</strong>
+                        </td>
+                        <td data-label="Origem">{getText(interesse.origem)}</td>
+                        <td className={styles.dateCell} data-label="Recebido">{formatDate(interesse.created_at)}</td>
+                        <td data-label="Ações">
+                          <div className={styles.rowActions}>
+                            <ActionLink
+                              href={mailUrl}
+                              icon={<Mail size={15} />}
+                              label="E-mail"
+                              iconOnly
+                            />
+                            <button
+                              aria-label="Ver detalhes"
+                              className={styles.actionIconButton}
+                              title="Ver detalhes"
+                              type="button"
+                              onClick={() => {
+                                setOpenActionMenuId('')
+                                openLeadDetails('interesse', interesse)
+                              }}
+                            >
+                              <Info size={15} />
+                            </button>
+                            <ActionMenu
+                              open={openActionMenuId === rowId}
+                              onToggle={() => setOpenActionMenuId(openActionMenuId === rowId ? '' : rowId)}
+                            >
+                              <RowActionButton
+                                icon={archived ? <ArchiveRestore size={15} /> : <Archive size={15} />}
+                                label={archived ? 'Restaurar' : 'Arquivar'}
+                                disabled={mutatingLeadId === interesse.id}
+                                variant="warning"
+                                onClick={() => {
+                                  setOpenActionMenuId('')
+                                  updateLeadStatus('interesse', interesse, archived ? 'restore' : 'archive')
+                                }}
+                              />
+                              <RowActionButton
+                                icon={<Trash2 size={15} />}
+                                label="Excluir"
+                                disabled={mutatingLeadId === interesse.id}
+                                variant="danger"
+                                onClick={() => {
+                                  setOpenActionMenuId('')
+                                  deleteLead('interesse', interesse)
+                                }}
+                              />
+                            </ActionMenu>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+
+              {!loading && filteredInteresses.length === 0 && (
+                <div className={styles.emptyState}>Nenhum interesse encontrado com esses filtros.</div>
+              )}
+            </div>
+          </>
+        )}
+
         {activeTab === 'kanban' && (
           <div className={styles.kanbanShell}>
             <aside className={styles.boardSidebar}>
@@ -2453,7 +2726,13 @@ export default function AdminDashboard({
           <aside className={styles.detailDrawer}>
             <header className={styles.drawerHeader}>
               <div>
-                <span>{selectedLead.type === 'candidato' ? 'Currículo' : 'Empresa'}</span>
+                <span>
+                  {selectedLead.type === 'candidato'
+                    ? 'Currículo'
+                    : selectedLead.type === 'interesse'
+                      ? 'Interesse'
+                      : 'Empresa'}
+                </span>
                 <strong>{getText(selectedLead.lead.nome)}</strong>
                 <div className={styles.drawerHeaderMeta}>
                   <small>{formatDate(selectedLead.lead.created_at)}</small>
@@ -2467,12 +2746,14 @@ export default function AdminDashboard({
             <div className={styles.drawerSection}>
               <h3>Contato rapido</h3>
               <div className={styles.drawerActions}>
-                <ActionLink
-                  href={getWhatsAppUrl(selectedLead.lead.whatsapp, `Olá, ${getText(selectedLead.lead.nome, '')}! Aqui é da Porto Talent.`)}
-                  icon={<MessageCircle size={15} />}
-                  label="WhatsApp"
-                  variant="success"
-                />
+                {selectedLead.type !== 'interesse' && (
+                  <ActionLink
+                    href={getWhatsAppUrl(selectedLead.lead.whatsapp, `Olá, ${getText(selectedLead.lead.nome, '')}! Aqui é da Porto Talent.`)}
+                    icon={<MessageCircle size={15} />}
+                    label="WhatsApp"
+                    variant="success"
+                  />
+                )}
                 <ActionLink
                   href={getMailUrl(selectedLead.lead.email, 'Porto Talent')}
                   icon={<Mail size={15} />}
@@ -2491,7 +2772,9 @@ export default function AdminDashboard({
               <h3>Dados principais</h3>
               <dl className={styles.detailGrid}>
                 <div><dt>E-mail</dt><dd>{getText(selectedLead.lead.email)}</dd></div>
-                <div><dt>WhatsApp</dt><dd>{getText(selectedLead.lead.whatsapp)}</dd></div>
+                {selectedLead.type !== 'interesse' && (
+                  <div><dt>WhatsApp</dt><dd>{getText(selectedLead.lead.whatsapp)}</dd></div>
+                )}
                 <div><dt>Recebido</dt><dd>{formatDate(selectedLead.lead.created_at)}</dd></div>
                 {selectedLead.type === 'empresa' ? (
                   <>
@@ -2500,6 +2783,10 @@ export default function AdminDashboard({
                     <div><dt>Colaboradores</dt><dd>{getText((selectedLead.lead as EmpresaLead).quantidade_colaboradores)}</dd></div>
                     <div><dt>Prazo</dt><dd>{getText((selectedLead.lead as EmpresaLead).prazo)}</dd></div>
                     <div><dt>Mensagem</dt><dd>{getText((selectedLead.lead as EmpresaLead).mensagem)}</dd></div>
+                  </>
+                ) : selectedLead.type === 'interesse' ? (
+                  <>
+                    <div><dt>Serviço</dt><dd>{getText((selectedLead.lead as InteresseLead).servico)}</dd></div>
                   </>
                 ) : (
                   <>

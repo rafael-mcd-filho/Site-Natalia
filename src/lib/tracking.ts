@@ -1,8 +1,8 @@
 type TrackingPayload = Record<string, string | number | boolean | null | undefined>
 
 export type LeadTrackingPayload = {
-  type: 'empresa' | 'candidato'
-  lead_type: 'empresa' | 'candidato'
+  type: 'empresa' | 'candidato' | 'interesse'
+  lead_type: 'empresa' | 'candidato' | 'interesse'
   form_id: string
   form_id2: string
   form_name: string

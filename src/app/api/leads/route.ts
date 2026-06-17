@@ -62,6 +62,16 @@ const companySchema = z.object({
   ...trackingSchema,
 })
 
+const interestSchema = z.object({
+  tipo: z.literal('interesse'),
+  nome: requiredText('Nome'),
+  email: z.email('Informe um e-mail válido.').max(180),
+  servico: z.string().trim().max(180, 'Serviço está muito longo.').optional().or(z.literal('')),
+  website: z.string().trim().optional(),
+  lgpd: consentSchema,
+  ...trackingSchema,
+})
+
 const candidateSchema = z.object({
   tipo: z.literal('candidato'),
   nome: requiredText('Nome'),
@@ -268,6 +278,40 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => null)
+
+    if (body?.tipo === 'interesse') {
+      const parsed = interestSchema.safeParse(body)
+
+      if (!parsed.success) {
+        return NextResponse.json({ message: getValidationMessage(parsed.error) }, { status: 400 })
+      }
+
+      if (parsed.data.website) {
+        return NextResponse.json({ ok: true })
+      }
+
+      const lead = parsed.data
+      const leadInsert = {
+        nome: lead.nome,
+        email: lead.email,
+        servico: lead.servico || 'Gestão e Desenvolvimento de Equipes Comerciais',
+        lgpd: lead.lgpd,
+        origem: 'site_cta_gestao_comercial',
+        ...getTrackingInsert(lead, request),
+      }
+      const { error } = await supabase
+        .from('leads_interesse')
+        .insert(leadInsert)
+        .select('*')
+        .single()
+
+      if (error) {
+        return NextResponse.json({ message: 'Não foi possível salvar o cadastro.' }, { status: 500 })
+      }
+
+      return NextResponse.json({ ok: true })
+    }
+
     const parsed = companySchema.safeParse(body)
 
     if (!parsed.success) {

@@ -10,6 +10,7 @@ import SectionProvasSocial from '@/components/SectionProvasSocial'
 import SectionCTAEmpresa from '@/components/SectionCTAEmpresa'
 import SectionAreaCandidato from '@/components/SectionAreaCandidato'
 import SectionFAQ from '@/components/SectionFAQ'
+import SectionCTAComercial from '@/components/SectionCTAComercial'
 import SectionCTAFinal from '@/components/SectionCTAFinal'
 import Footer from '@/components/Footer'
 import WhatsAppButton from '@/components/WhatsAppButton'
@@ -52,6 +53,7 @@ export default function Home() {
         {/* bege-quente → white */}
         <SectionConnector from="bege-quente" to="white" />
         <SectionFAQ />
+        <SectionCTAComercial />
         {/* white → bege */}
         <SectionConnector from="white" to="bege" />
         <SectionCTAFinal />

@@ -81,6 +81,15 @@
   line-height: 1.18;
 }
 
+.section h3 {
+  margin: 26px 0 10px;
+  color: var(--preto);
+  font-family: var(--font-serif);
+  font-size: 23px;
+  font-weight: 500;
+  line-height: 1.22;
+}
+
 .section p,
 .section li {
   color: var(--cinza-escuro);
