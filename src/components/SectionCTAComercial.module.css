@@ -1,0 +1,238 @@
+.section {
+  padding-top: 36px;
+  padding-bottom: 76px;
+}
+
+.card {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  justify-items: center;
+  border: 1px solid rgba(184, 147, 90, 0.46);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0)),
+    var(--preto);
+  padding: clamp(36px, 6vw, 68px) clamp(24px, 7vw, 96px);
+  box-shadow: 0 24px 70px rgba(14, 14, 14, 0.22);
+  text-align: center;
+}
+
+.card::before,
+.card::after {
+  content: '';
+  position: absolute;
+  left: clamp(24px, 6vw, 76px);
+  right: clamp(24px, 6vw, 76px);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(184, 147, 90, 0.7), transparent);
+  pointer-events: none;
+}
+
+.card::before {
+  top: 24px;
+}
+
+.card::after {
+  bottom: 24px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin: 0 0 16px;
+  color: var(--dourado);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.title {
+  max-width: 860px;
+  margin: 0;
+  color: var(--bege);
+  font-family: var(--font-serif);
+  font-size: clamp(34px, 5vw, 64px);
+  font-weight: 500;
+  line-height: 1.08;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.copy {
+  max-width: 760px;
+  margin: 18px 0 0;
+  color: rgba(242, 230, 216, 0.76);
+  font-family: var(--font-sans);
+  font-size: clamp(16px, 1.7vw, 20px);
+  line-height: 1.65;
+  text-align: center;
+}
+
+.ctaButton,
+.submitButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 4px;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 0.25s, box-shadow 0.25s, background 0.25s, color 0.25s;
+}
+
+.ctaButton {
+  min-height: 54px;
+  margin-top: 34px;
+  background: var(--bege);
+  color: var(--preto);
+  padding: 0 30px;
+}
+
+.ctaButton:hover {
+  background: var(--branco);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
+  transform: translateY(-2px);
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(14, 14, 14, 0.58);
+  padding: 20px;
+  backdrop-filter: blur(6px);
+}
+
+.modal {
+  width: min(100%, 460px);
+  border: 1px solid rgba(184, 147, 90, 0.28);
+  border-radius: 8px;
+  background: var(--branco);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.24);
+  padding: 24px;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.modalHeader span {
+  color: var(--dourado);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.modalHeader h3 {
+  margin: 4px 0 0;
+  color: var(--preto);
+  font-family: var(--font-serif);
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.modalHeader button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--cinza-suave);
+  border-radius: 4px;
+  background: var(--branco);
+  color: var(--cinza-escuro);
+}
+
+.honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.checkbox {
+  margin: 4px 0 20px;
+}
+
+.checkbox span {
+  color: var(--cinza-escuro);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.checkbox a {
+  color: var(--preto);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.lgpdError {
+  margin-top: -12px;
+  margin-bottom: 16px;
+}
+
+.submitButton {
+  width: 100%;
+  min-height: 52px;
+  background: var(--preto);
+  color: var(--bege);
+  padding: 0 18px;
+}
+
+.submitButton:hover {
+  background: #1a1a1a;
+  box-shadow: 0 12px 28px rgba(14, 14, 14, 0.16);
+  transform: translateY(-2px);
+}
+
+.submitButton:disabled {
+  cursor: progress;
+  opacity: 0.72;
+  transform: none;
+}
+
+.error {
+  margin: 12px 0 0;
+  color: #b42318;
+  font-size: 13px;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .section {
+    padding-top: 24px;
+    padding-bottom: 56px;
+  }
+
+  .card {
+    padding: 38px 22px;
+  }
+
+  .ctaButton {
+    width: 100%;
+  }
+
+  .modal {
+    padding: 20px;
+  }
+}
