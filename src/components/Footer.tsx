@@ -45,7 +45,7 @@ export default function Footer() {
                 },
                 {
                   icon: <Mail size={16} strokeWidth={1.5} aria-hidden="true" />,
-                  text: 'contato@portotalent.com.br', href: 'mailto:contato@portotalent.com.br',
+                  text: 'atendimento@portotalentconsultoria.com', href: 'mailto:atendimento@portotalentconsultoria.com',
                 },
                 {
                   icon: <MapPin size={16} strokeWidth={1.5} aria-hidden="true" />,

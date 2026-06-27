@@ -216,7 +216,7 @@ export default function TermosDeUsoPage() {
           <section className={styles.contactBox}>
             <h2>Contato</h2>
             <p>
-              E-mail: <a href="mailto:contato@portotalent.com.br">contato@portotalent.com.br</a>
+              E-mail: <a href="mailto:atendimento@portotalentconsultoria.com">atendimento@portotalentconsultoria.com</a>
             </p>
             <p>
               WhatsApp:{' '}

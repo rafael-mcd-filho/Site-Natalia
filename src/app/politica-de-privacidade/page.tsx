@@ -40,7 +40,7 @@ export default function PoliticaDePrivacidadePage() {
             </p>
             <p>
               Para assuntos de privacidade, você pode entrar em contato pelo e-mail{' '}
-              <a href="mailto:contato@portotalent.com.br">contato@portotalent.com.br</a> ou pelo WhatsApp{' '}
+              <a href="mailto:atendimento@portotalentconsultoria.com">atendimento@portotalentconsultoria.com</a> ou pelo WhatsApp{' '}
               <a href="https://wa.me/558387523450" target="_blank" rel="noopener noreferrer">
                 (83) 8752-3450
               </a>.
@@ -151,7 +151,7 @@ export default function PoliticaDePrivacidadePage() {
           <section className={styles.contactBox}>
             <h2>Contato sobre privacidade</h2>
             <p>
-              E-mail: <a href="mailto:contato@portotalent.com.br">contato@portotalent.com.br</a>
+              E-mail: <a href="mailto:atendimento@portotalentconsultoria.com">atendimento@portotalentconsultoria.com</a>
             </p>
             <p>
               WhatsApp:{' '}
