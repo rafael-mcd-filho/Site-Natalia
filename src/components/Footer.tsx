@@ -1,4 +1,5 @@
 import { Mail, MapPin, Phone } from 'lucide-react'
+import Image from 'next/image'
 
 const navLinks = ['Início', 'Serviços', 'Processo', 'Depoimentos', 'Contato', 'Para candidatos']
 const navHrefs = ['#inicio', '#servicos', '#processo', '#depoimentos', '#contato', '#candidatos']
@@ -12,9 +13,16 @@ export default function Footer() {
 
           {/* Coluna 1 — Marca */}
           <div>
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 600, color: 'var(--bege)', marginBottom: 16 }}>
-              Porto Talent
-            </div>
+            <a href="#inicio" aria-label="Porto Talent — início" className="footer-brand-link">
+              <Image
+                src="/brand/porto-talent-logo.png"
+                alt="Porto Talent — Consultoria e Recrutamento"
+                width={1282}
+                height={1020}
+                className="footer-brand-logo"
+                sizes="156px"
+              />
+            </a>
             <p style={{ fontFamily: 'var(--font-serif)', fontSize: 14, lineHeight: 1.6, color: 'rgba(242,230,216,0.7)', fontStyle: 'italic' }}>
               Recrutamento estratégico para empresas que querem acertar.
             </p>
@@ -119,6 +127,14 @@ export default function Footer() {
       </div>
 
       <style>{`
+        .footer-brand-link {
+          display: inline-flex; margin-bottom: 18px; text-decoration: none;
+        }
+        .footer-brand-logo {
+          display: block; width: 156px; height: auto;
+          transition: opacity 0.25s ease;
+        }
+        .footer-brand-link:hover .footer-brand-logo { opacity: 0.76; }
         .footer-link {
           font-family: var(--font-sans); font-size: 14px; font-weight: 400;
           color: rgba(242,230,216,0.65); text-decoration: none; cursor: pointer;

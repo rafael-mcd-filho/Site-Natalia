@@ -1,6 +1,7 @@
 'use client'
 
 import { ArrowRight, BriefcaseBusiness, UserRound } from 'lucide-react'
+import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { trackEvent } from '@/lib/tracking'
 
@@ -41,11 +42,17 @@ export default function Header() {
       >
         <div className="container" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           {/* Logo */}
-          <a href="#inicio" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{
-              fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 600,
-              color: 'var(--preto)', letterSpacing: '-0.01em',
-            }}>Porto Talent</span>
+          <a href="#inicio" aria-label="Porto Talent — início" className="header-brand-link">
+            <Image
+              src="/brand/porto-talent-logo.png"
+              alt="Porto Talent — Consultoria e Recrutamento"
+              width={1282}
+              height={1020}
+              className={`header-brand-logo ${scrolled ? 'header-brand-logo--scrolled' : ''}`}
+              loading="eager"
+              fetchPriority="high"
+              sizes="96px"
+            />
           </a>
 
           {/* Nav desktop */}
@@ -175,6 +182,17 @@ export default function Header() {
           font-family: var(--font-sans); font-size: 14px; font-weight: 400;
           color: var(--cinza-escuro); text-decoration: none; position: relative; cursor: pointer;
         }
+        .header-brand-link {
+          display: flex; align-items: center; align-self: stretch; flex-shrink: 0;
+          text-decoration: none;
+        }
+        .header-brand-logo {
+          display: block; width: auto; height: 72px; object-fit: contain;
+          filter: brightness(0);
+          transition: height 0.3s ease, opacity 0.25s ease;
+        }
+        .header-brand-logo--scrolled { height: 56px; }
+        .header-brand-link:hover .header-brand-logo { opacity: 0.72; }
         .nav-link::after {
           content: ''; position: absolute; bottom: -2px; left: 0;
           width: 0; height: 1px; background: var(--preto);

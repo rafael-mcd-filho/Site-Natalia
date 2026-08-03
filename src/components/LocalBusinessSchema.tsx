@@ -6,6 +6,7 @@ export default function LocalBusinessSchema() {
     '@type': 'ProfessionalService',
     name: siteName,
     url: absoluteUrl('/'),
+    logo: absoluteUrl('/brand/porto-talent-logo.png'),
     image: absoluteUrl('/og-image.png'),
     telephone: '+55 83 8752-3450',
     areaServed: ['João Pessoa', 'Paraíba', 'Brasil'],

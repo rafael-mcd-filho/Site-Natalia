@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
 import { createMetadata } from '@/lib/seo'
 import styles from '../legal.module.css'
@@ -14,7 +15,16 @@ export default function PoliticaDePrivacidadePage() {
     <main className={styles.shell}>
       <header className={styles.topbar}>
         <div className={styles.topbarInner}>
-          <Link className={styles.brand} href="/">Porto Talent</Link>
+          <Link className={styles.brand} href="/" aria-label="Porto Talent — página inicial">
+            <Image
+              src="/brand/porto-talent-logo.png"
+              alt="Porto Talent — Consultoria e Recrutamento"
+              width={1282}
+              height={1020}
+              className={styles.brandLogo}
+              sizes="72px"
+            />
+          </Link>
           <Link className={styles.backLink} href="/">Voltar para o site</Link>
         </div>
       </header>
